@@ -3,6 +3,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes';
+import scanRoutes from './routes/scanRoutes';
 import { getUserProfile } from './controllers/authController';
 import { protect } from './middleware/authMiddleware';
 
@@ -28,6 +29,7 @@ app.get('/health', (req, res) => {
 
 // Map routers
 app.use('/auth', authRoutes);
+app.use('/', scanRoutes);
 
 // Protected Route: GET /profile
 app.get('/profile', protect as any, getUserProfile as any);
