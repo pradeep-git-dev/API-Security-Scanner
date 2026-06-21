@@ -1,5 +1,7 @@
 import { Request } from 'express';
 
+export * from './enums';
+
 export interface AuthenticatedUser {
   id: string;
   email: string;
@@ -9,3 +11,4 @@ export interface AuthenticatedUser {
 export interface AuthenticatedRequest extends Request {
   user?: AuthenticatedUser;
 }
+
