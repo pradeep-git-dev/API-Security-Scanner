@@ -5,6 +5,7 @@ import Report from '../models/Report';
 import ScanLog from '../models/ScanLog';
 import { createScanSchema } from '../validators/scanValidator';
 import { AuthenticatedRequest } from '../types';
+import { scanTarget } from '../services/scannerService';
 
 /**
  * @desc    Create a new scan
@@ -135,3 +136,38 @@ export const deleteScan = async (req: AuthenticatedRequest, res: Response) => {
     return res.status(500).json({ message: 'Server error during scan deletion' });
   }
 };
+
+/**
+ * @desc    Trigger scan execution (calls Python scanner)
+ * @route   POST /scan/start/:id
+ * @access  Private
+ */
+export const triggerScan = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Not authorized' });
+    }
+
+    const scan = await Scan.findById(req.params.id);
+    if (!scan) {
+      return res.status(404).json({ message: 'Scan not found' });
+    }
+
+    // Verify ownership
+    if (scan.userId.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Access denied: You do not own this scan' });
+    }
+
+    // Call FastAPI service
+    const findings = await scanTarget(scan.targetUrl);
+
+    return res.json({
+      message: 'Scan triggered successfully',
+      findings,
+    });
+  } catch (error: any) {
+    console.error('Trigger scan error:', error);
+    return res.status(500).json({ message: error.message || 'Server error during scan execution' });
+  }
+};
+
