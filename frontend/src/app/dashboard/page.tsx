@@ -19,6 +19,7 @@ export default function DashboardPage() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [runningScans, setRunningScans] = useState<Record<string, boolean>>({});
   const router = useRouter();
 
   useEffect(() => {
@@ -87,6 +88,30 @@ export default function DashboardPage() {
     } catch (err: any) {
       console.error(err);
       setError(err.response?.data?.message || 'Failed to delete scan.');
+    }
+  };
+
+  const handleRunScan = async (id: string) => {
+    setError('');
+    setMessage('');
+    setRunningScans((prev) => ({ ...prev, [id]: true }));
+
+    try {
+      const response = await api.post(`/scan/start/${id}`);
+      setMessage('Scan triggered successfully!');
+      
+      // Log findings in console for debugging
+      if (response.data.findings) {
+        console.log('Scan findings:', response.data.findings);
+      }
+      
+      // Refresh the scans list
+      fetchScans();
+    } catch (err: any) {
+      console.error(err);
+      setError(err.response?.data?.message || 'Failed to start scan.');
+    } finally {
+      setRunningScans((prev) => ({ ...prev, [id]: false }));
     }
   };
 
@@ -174,6 +199,20 @@ export default function DashboardPage() {
                   {new Date(scan.createdAt || new Date()).toLocaleString()}
                 </td>
                 <td style={{ padding: '10px' }}>
+                  <button
+                    onClick={() => handleRunScan(scan._id)}
+                    disabled={runningScans[scan._id]}
+                    style={{ 
+                      padding: '5px 10px', 
+                      backgroundColor: '#2e7d32', 
+                      color: 'white', 
+                      border: 'none', 
+                      cursor: runningScans[scan._id] ? 'not-allowed' : 'pointer',
+                      marginRight: '8px'
+                    }}
+                  >
+                    {runningScans[scan._id] ? 'Running...' : 'Run Scan'}
+                  </button>
                   <button
                     onClick={() => handleDeleteScan(scan._id)}
                     style={{ padding: '5px 10px', backgroundColor: '#d32f2f', color: 'white', border: 'none', cursor: 'pointer' }}
