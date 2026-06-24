@@ -158,11 +158,85 @@ export const triggerScan = async (req: AuthenticatedRequest, res: Response) => {
       return res.status(403).json({ message: 'Access denied: You do not own this scan' });
     }
 
-    // Call FastAPI service
-    const findings = await scanTarget(scan.targetUrl);
+    // 1. Update status to SCANNING and save
+    scan.status = 'SCANNING' as any;
+    scan.startedAt = new Date();
+    await scan.save();
+
+    const startTime = Date.now();
+
+    // 2. Call FastAPI service and handle errors
+    let findings;
+    try {
+      findings = await scanTarget(scan.targetUrl);
+    } catch (scanErr: any) {
+      scan.status = 'FAILED' as any;
+      await scan.save();
+      throw scanErr;
+    }
+
+    // 3. Save Vulnerability documents in MongoDB
+    const vulnerabilityDocs = findings.map((f: any) => ({
+      scanId: scan._id,
+      endpoint: f.endpoint,
+      method: f.method,
+      issue: f.issue,
+      severity: f.severity,
+      confidence: f.confidence,
+      description: f.description,
+      recommendation: f.recommendation,
+      detectedAt: new Date(),
+    }));
+
+    if (vulnerabilityDocs.length > 0) {
+      await Vulnerability.insertMany(vulnerabilityDocs);
+    }
+
+    // 4. Calculate severity counts and score (100 - penalties)
+    let critical = 0;
+    let high = 0;
+    let medium = 0;
+    let low = 0;
+
+    findings.forEach((f: any) => {
+      const sev = f.severity.toUpperCase();
+      if (sev === 'CRITICAL') critical++;
+      else if (sev === 'HIGH') high++;
+      else if (sev === 'MEDIUM') medium++;
+      else if (sev === 'LOW') low++;
+    });
+
+    const penalty = (critical * 25) + (high * 15) + (medium * 10) + (low * 5);
+    const score = Math.max(0, 100 - penalty);
+
+    // 5. Create and save Report document
+    const report = await Report.create({
+      scanId: scan._id,
+      critical,
+      high,
+      medium,
+      low,
+      score,
+      generatedAt: new Date(),
+    });
+
+    // 6. Update Scan status, completedAt, durationMs, and score
+    const durationMs = Date.now() - startTime;
+    scan.status = 'COMPLETED' as any;
+    scan.completedAt = new Date();
+    scan.durationMs = durationMs;
+    scan.score = score;
+    
+    // Calculate totalEndpointsScanned based on unique endpoints from findings, fallback to 1
+    const uniqueEndpoints = new Set(findings.map((f: any) => f.endpoint));
+    scan.totalEndpointsScanned = Math.max(1, uniqueEndpoints.size);
+
+    await scan.save();
 
     return res.json({
-      message: 'Scan triggered successfully',
+      message: 'Scan completed successfully',
+      scan,
+      report,
       findings,
     });
   } catch (error: any) {
