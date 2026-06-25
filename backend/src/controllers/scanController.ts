@@ -202,6 +202,10 @@ export const triggerScan = async (req: AuthenticatedRequest, res: Response) => {
       throw scanErr;
     }
 
+    // Clear any existing vulnerabilities and reports for this scan to prevent duplicate findings on re-run
+    await Vulnerability.deleteMany({ scanId: scan._id });
+    await Report.deleteMany({ scanId: scan._id });
+
     // 3. Save Vulnerability documents in MongoDB
     const vulnerabilityDocs = findings.map((f: any) => ({
       scanId: scan._id,
