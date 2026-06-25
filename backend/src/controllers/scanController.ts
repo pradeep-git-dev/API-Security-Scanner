@@ -6,6 +6,7 @@ import ScanLog from '../models/ScanLog';
 import { createScanSchema } from '../validators/scanValidator';
 import { AuthenticatedRequest } from '../types';
 import { scanTarget } from '../services/scannerService';
+import { enrichVulnerability } from '../services/aiService';
 
 /**
  * @desc    Create a new scan
@@ -65,7 +66,30 @@ export const getUserScans = async (req: AuthenticatedRequest, res: Response) => 
     // Retrieve only user's scans, sorted by createdAt descending
     const scans = await Scan.find({ userId: req.user.id }).sort({ createdAt: -1 });
 
-    return res.json({ scans });
+    // Calculate statistics
+    const totalScans = scans.length;
+    
+    // Average score across completed scans, default to 100 if no scans
+    const completedScans = scans.filter(s => s.status === 'COMPLETED');
+    const averageScore = completedScans.length === 0
+      ? 100
+      : Math.round(completedScans.reduce((acc, s) => acc + (s.score || 0), 0) / completedScans.length);
+
+    // Get count of critical vulnerabilities across all of user's scans
+    const scanIds = scans.map(s => s._id);
+    const criticalFindings = await Vulnerability.countDocuments({
+      scanId: { $in: scanIds },
+      severity: 'CRITICAL',
+    });
+
+    return res.json({
+      scans,
+      stats: {
+        totalScans,
+        averageScore,
+        criticalFindings,
+      },
+    });
   } catch (error) {
     console.error('Get scans error:', error);
     return res.status(500).json({ message: 'Server error fetching scans' });
@@ -93,7 +117,10 @@ export const getScanById = async (req: AuthenticatedRequest, res: Response) => {
       return res.status(403).json({ message: 'Access denied: You do not own this scan' });
     }
 
-    return res.json({ scan });
+    // Fetch associated findings with their AI enrichment data
+    const findings = await Vulnerability.find({ scanId: scan._id });
+
+    return res.json({ scan, findings });
   } catch (error) {
     console.error('Get scan by ID error:', error);
     return res.status(500).json({ message: 'Server error fetching scan details' });
@@ -188,8 +215,30 @@ export const triggerScan = async (req: AuthenticatedRequest, res: Response) => {
       detectedAt: new Date(),
     }));
 
+    let savedDocs: any[] = [];
     if (vulnerabilityDocs.length > 0) {
-      await Vulnerability.insertMany(vulnerabilityDocs);
+      savedDocs = await Vulnerability.insertMany(vulnerabilityDocs);
+
+      // Call Gemini for each vulnerability finding and enrich with explanation, impact, fix, and code example
+      for (const doc of savedDocs) {
+        try {
+          const aiResult = await enrichVulnerability(
+            doc.issue,
+            doc.severity,
+            doc.description,
+            doc.recommendation
+          );
+
+          doc.aiExplanation = aiResult.aiExplanation;
+          doc.aiImpact = aiResult.aiImpact;
+          doc.aiFix = aiResult.aiFix;
+          doc.codeExample = aiResult.codeExample;
+
+          await doc.save();
+        } catch (enrichErr: any) {
+          console.error(`[Scan Controller] Failed to enrich vulnerability ${doc._id}:`, enrichErr.message || enrichErr);
+        }
+      }
     }
 
     // 4. Calculate severity counts and score (100 - penalties)
@@ -237,7 +286,7 @@ export const triggerScan = async (req: AuthenticatedRequest, res: Response) => {
       message: 'Scan completed successfully',
       scan,
       report,
-      findings,
+      findings: savedDocs,
     });
   } catch (error: any) {
     console.error('Trigger scan error:', error);

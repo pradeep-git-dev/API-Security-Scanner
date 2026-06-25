@@ -18,6 +18,10 @@ app = FastAPI(title="API Sentinel Scanner Service")
 def read_root():
     return {"message": "Scanner running"}
 
+@app.get("/health")
+def health_check():
+    return {"status": "scanner running"}
+
 @app.post("/scan", response_model=List[Vulnerability])
 async def scan(req: ScanRequest):
     results = await asyncio.gather(

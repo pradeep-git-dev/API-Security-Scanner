@@ -24,7 +24,7 @@ app.use(cookieParser());
 
 // Basic health check route
 app.get('/health', (req, res) => {
-  res.json({ status: 'healthy', timestamp: new Date() });
+  res.json({ status: 'ok' });
 });
 
 // Map routers
