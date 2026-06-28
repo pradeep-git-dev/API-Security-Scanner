@@ -5,8 +5,10 @@ import Report from '../models/Report';
 import ScanLog from '../models/ScanLog';
 import { createScanSchema } from '../validators/scanValidator';
 import { AuthenticatedRequest } from '../types';
-import { scanTarget } from '../services/scannerService';
+import { scanTarget, ScanResult } from '../services/scannerService';
 import { enrichVulnerability } from '../services/aiService';
+import { generateScanPDF } from '../services/pdfService';
+import { calculateDrift } from '../services/comparisonService';
 
 /**
  * @desc    Create a new scan
@@ -28,18 +30,22 @@ export const createScan = async (req: AuthenticatedRequest, res: Response) => {
       });
     }
 
-    const { targetUrl } = validation.data;
+    const { targetUrl, authConfig, openApiSpec } = validation.data;
 
-    // 2. Create scan document in DB
+    // 2. Create scan document in DB (never store tokenValue)
     const scan = await Scan.create({
       userId: req.user.id,
       targetUrl,
-      sourceType: 'web',
+      sourceType: openApiSpec ? 'openapi' : 'web',
       status: 'PENDING',
       progress: 0,
       score: 0,
       totalEndpointsScanned: 0,
       scannerVersion: '1.0.0',
+      authConfig: authConfig ? {
+        authType: authConfig.authType,
+        headerName: authConfig.headerName,
+      } : { authType: 'None' },
     });
 
     return res.status(201).json({
@@ -63,24 +69,21 @@ export const getUserScans = async (req: AuthenticatedRequest, res: Response) => 
       return res.status(401).json({ message: 'Not authorized' });
     }
 
-    // Retrieve only user's scans, sorted by createdAt descending
     const scans = await Scan.find({ userId: req.user.id }).sort({ createdAt: -1 });
 
-    // Calculate statistics
     const totalScans = scans.length;
-    
-    // Average score across completed scans, default to 100 if no scans
     const completedScans = scans.filter(s => s.status === 'COMPLETED');
     const averageScore = completedScans.length === 0
       ? 100
       : Math.round(completedScans.reduce((acc, s) => acc + (s.score || 0), 0) / completedScans.length);
 
-    // Get count of critical vulnerabilities across all of user's scans
     const scanIds = scans.map(s => s._id);
     const criticalFindings = await Vulnerability.countDocuments({
       scanId: { $in: scanIds },
       severity: 'CRITICAL',
     });
+
+    const lastScanTime = scans.length > 0 ? (scans[0].completedAt || scans[0].startedAt || scans[0].createdAt) : null;
 
     return res.json({
       scans,
@@ -88,6 +91,7 @@ export const getUserScans = async (req: AuthenticatedRequest, res: Response) => 
         totalScans,
         averageScore,
         criticalFindings,
+        lastScanTime,
       },
     });
   } catch (error) {
@@ -112,15 +116,14 @@ export const getScanById = async (req: AuthenticatedRequest, res: Response) => {
       return res.status(404).json({ message: 'Scan not found' });
     }
 
-    // Verify ownership
     if (scan.userId.toString() !== req.user.id) {
       return res.status(403).json({ message: 'Access denied: You do not own this scan' });
     }
 
-    // Fetch associated findings with their AI enrichment data
     const findings = await Vulnerability.find({ scanId: scan._id });
+    const report = await Report.findOne({ scanId: scan._id });
 
-    return res.json({ scan, findings });
+    return res.json({ scan, report, findings });
   } catch (error) {
     console.error('Get scan by ID error:', error);
     return res.status(500).json({ message: 'Server error fetching scan details' });
@@ -143,12 +146,10 @@ export const deleteScan = async (req: AuthenticatedRequest, res: Response) => {
       return res.status(404).json({ message: 'Scan not found' });
     }
 
-    // Verify ownership
     if (scan.userId.toString() !== req.user.id) {
       return res.status(403).json({ message: 'Access denied: You do not own this scan' });
     }
 
-    // Delete scan and all associated data
     await Scan.findByIdAndDelete(req.params.id);
     await Vulnerability.deleteMany({ scanId: scan._id });
     await Report.deleteMany({ scanId: scan._id });
@@ -180,35 +181,47 @@ export const triggerScan = async (req: AuthenticatedRequest, res: Response) => {
       return res.status(404).json({ message: 'Scan not found' });
     }
 
-    // Verify ownership
     if (scan.userId.toString() !== req.user.id) {
       return res.status(403).json({ message: 'Access denied: You do not own this scan' });
     }
 
-    // 1. Update status to SCANNING and save
+    // 1. Retrieve transient config properties from request body
+    const { tokenValue, username, password, openApiSpec } = req.body;
+
+    // Build the authConfig payload for python scanner execution
+    const pythonAuthConfig = scan.authConfig ? {
+      authType: scan.authConfig.authType,
+      headerName: scan.authConfig.headerName,
+      tokenValue: tokenValue || password,
+      username: username,
+      password: password,
+    } : undefined;
+
+    // 2. Update status to SCANNING
     scan.status = 'SCANNING' as any;
     scan.startedAt = new Date();
     await scan.save();
 
     const startTime = Date.now();
 
-    // 2. Call FastAPI service and handle errors
-    let findings;
+    // 3. Invoke FastAPI service passing transient OpenAPI spec and authConfig
+    let scanResult: ScanResult;
     try {
-      findings = await scanTarget(scan.targetUrl);
+      scanResult = await scanTarget(scan.targetUrl, openApiSpec, pythonAuthConfig);
     } catch (scanErr: any) {
       scan.status = 'FAILED' as any;
       await scan.save();
       throw scanErr;
     }
 
-    // Clear any existing vulnerabilities and reports for this scan to prevent duplicate findings on re-run
+    // Clear any existing vulnerabilities/reports
     await Vulnerability.deleteMany({ scanId: scan._id });
     await Report.deleteMany({ scanId: scan._id });
 
-    // 3. Save Vulnerability documents in MongoDB
-    const vulnerabilityDocs = findings.map((f: any) => ({
+    // 4. Save Vulnerability documents in MongoDB (adding findingId)
+    const vulnerabilityDocs = scanResult.findings.map((f: any) => ({
       scanId: scan._id,
+      findingId: f.findingId || '',
       endpoint: f.endpoint,
       method: f.method,
       issue: f.issue,
@@ -216,6 +229,11 @@ export const triggerScan = async (req: AuthenticatedRequest, res: Response) => {
       confidence: f.confidence,
       description: f.description,
       recommendation: f.recommendation,
+      category: f.category || 'Security Findings',
+      evidence: f.evidence || null,
+      impact: f.impact || '',
+      owasp: f.owasp || '',
+      cwe: f.cwe || '',
       detectedAt: new Date(),
     }));
 
@@ -223,8 +241,11 @@ export const triggerScan = async (req: AuthenticatedRequest, res: Response) => {
     if (vulnerabilityDocs.length > 0) {
       savedDocs = await Vulnerability.insertMany(vulnerabilityDocs);
 
-      // Call Gemini for each vulnerability finding and enrich with explanation, impact, fix, and code example
+      // Call Gemini AI for actual security findings enrichment
       for (const doc of savedDocs) {
+        if (doc.category === 'Passed Checks' || doc.category === 'Informational' || doc.severity === 'INFO') {
+          continue;
+        }
         try {
           const aiResult = await enrichVulnerability(
             doc.issue,
@@ -245,13 +266,36 @@ export const triggerScan = async (req: AuthenticatedRequest, res: Response) => {
       }
     }
 
-    // 4. Calculate severity counts and score (100 - penalties)
+    // 5. Query for previous completed scan reports to perform historical comparisons
+    const previousScan = await Scan.findOne({
+      userId: req.user.id,
+      targetUrl: scan.targetUrl,
+      status: 'COMPLETED',
+      _id: { $ne: scan._id }
+    }).sort({ completedAt: -1 });
+
+    let drift = null;
+    if (previousScan) {
+      const previousFindings = await Vulnerability.find({ scanId: previousScan._id });
+      const previousReport = await Report.findOne({ scanId: previousScan._id });
+      if (previousReport) {
+        drift = calculateDrift(
+          previousReport.score,
+          scanResult.score,
+          previousFindings as any[],
+          savedDocs as any[]
+        );
+      }
+    }
+
+    // 6. Calculate severity counts for statistics
     let critical = 0;
     let high = 0;
     let medium = 0;
     let low = 0;
 
-    findings.forEach((f: any) => {
+    scanResult.findings.forEach((f: any) => {
+      if (f.category === 'Passed Checks' || f.category === 'Informational') return;
       const sev = f.severity.toUpperCase();
       if (sev === 'CRITICAL') critical++;
       else if (sev === 'HIGH') high++;
@@ -259,30 +303,54 @@ export const triggerScan = async (req: AuthenticatedRequest, res: Response) => {
       else if (sev === 'LOW') low++;
     });
 
-    const penalty = (critical * 25) + (high * 15) + (medium * 10) + (low * 5);
-    const score = Math.max(0, 100 - penalty);
-
-    // 5. Create and save Report document
+    // 7. Save Report document
     const report = await Report.create({
       scanId: scan._id,
       critical,
       high,
       medium,
       low,
-      score,
+      score: scanResult.score,
       generatedAt: new Date(),
+      targetType: scanResult.targetType,
+      framework: scanResult.framework,
+      contentType: scanResult.contentType,
+      server: scanResult.server,
+      tlsVersion: scanResult.tlsVersion,
+      responseTimeMs: scanResult.responseTimeMs,
+      scoreBreakdown: scanResult.scoreBreakdown,
+      categories: scanResult.categories,
+      confidence: scanResult.confidence,
+      headersStatus: scanResult.headersStatus,
+      rateLimitReport: scanResult.rateLimitReport,
+      endpointTree: scanResult.endpointTree || [],
+      driftComparison: drift ? {
+        previousScore: drift.previousScore,
+        currentScore: drift.currentScore,
+        difference: drift.difference,
+        resolvedCount: drift.resolvedCount,
+        newCount: drift.newCount,
+        severityChanges: drift.severityChanges,
+      } : {
+        previousScore: 100,
+        currentScore: scanResult.score,
+        difference: 0,
+        resolvedCount: 0,
+        newCount: 0,
+        severityChanges: [],
+      }
     });
 
-    // 6. Update Scan status, completedAt, durationMs, and score
+    // 8. Update Scan metadata properties (fingerprint & discoveryMetadata)
     const durationMs = Date.now() - startTime;
     scan.status = 'COMPLETED' as any;
     scan.completedAt = new Date();
     scan.durationMs = durationMs;
-    scan.score = score;
+    scan.score = scanResult.score;
+    scan.totalEndpointsScanned = scanResult.discoveryMetadata?.endpointCount || 1;
     
-    // Calculate totalEndpointsScanned based on unique endpoints from findings, fallback to 1
-    const uniqueEndpoints = new Set(findings.map((f: any) => f.endpoint));
-    scan.totalEndpointsScanned = Math.max(1, uniqueEndpoints.size);
+    scan.fingerprint = scanResult.fingerprint;
+    scan.discoveryMetadata = scanResult.discoveryMetadata;
 
     await scan.save();
 
@@ -298,3 +366,36 @@ export const triggerScan = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
+/**
+ * @desc    Export scan report as PDF
+ * @route   GET /scan/:id/pdf
+ * @access  Private
+ */
+export const exportScanPDF = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Not authorized' });
+    }
+
+    const scan = await Scan.findById(req.params.id);
+    if (!scan) {
+      return res.status(404).json({ message: 'Scan not found' });
+    }
+
+    if (scan.userId.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Access denied: You do not own this scan' });
+    }
+
+    const findings = await Vulnerability.find({ scanId: scan._id });
+    const report = await Report.findOne({ scanId: scan._id });
+
+    const pdfBuffer = await generateScanPDF(scan as any, report as any, findings as any[]);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="API-Sentinel-Report-${scan._id}.pdf"`);
+    return res.send(pdfBuffer);
+  } catch (error: any) {
+    console.error('Export PDF error:', error);
+    return res.status(500).json({ message: 'Server error exporting PDF report' });
+  }
+};

@@ -1,0 +1,25 @@
+{
+  "categories": {
+    "Header Security": 30,
+    "Transport Security": 15,
+    "Server Security": 15,
+    "API Security": 25,
+    "Data Protection": 15
+  },
+  "findings": {
+    "Missing HTTPS": { "category": "Transport Security", "penalty": 15 },
+    "Missing CSP": { "category": "Header Security", "penalty": 8 },
+    "Missing HSTS": { "category": "Header Security", "penalty": 4 },
+    "Missing X-Frame-Options": { "category": "Header Security", "penalty": 3 },
+    "Missing X-Content-Type-Options": { "category": "Header Security", "penalty": 3 },
+    "Missing Referrer-Policy": { "category": "Header Security", "penalty": 2 },
+    "Missing Permissions-Policy": { "category": "Header Security", "penalty": 2 },
+    "HTTP Methods Over-permissive": { "category": "Server Security", "penalty": 5 },
+    "Excessive Data Exposure (Sensitive Secrets)": { "category": "Data Protection", "penalty": 15 },
+    "Weak CORS Policy (Permissive)": { "category": "API Security", "penalty": 12 },
+    "Rate Limiting Not Observed": { "category": "API Security", "penalty": 10 },
+    "Potential Public Endpoint": { "category": "API Security", "penalty": 8 },
+    "JWT Signature Verification Bypass": { "category": "API Security", "penalty": 15 },
+    "Potential SQL Injection": { "category": "Data Protection", "penalty": 15 }
+  }
+}

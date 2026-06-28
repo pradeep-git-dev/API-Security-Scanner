@@ -21,6 +21,7 @@ export default function LoginPage() {
       const { token } = response.data;
       
       localStorage.setItem('token', token);
+      document.cookie = `token=${token}; path=/; max-age=86400; SameSite=Lax;`;
       router.push('/dashboard');
     } catch (err: any) {
       console.error(err);

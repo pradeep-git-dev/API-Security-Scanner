@@ -14,6 +14,23 @@ export interface IScan extends Document {
   durationMs?: number;
   totalEndpointsScanned: number;
   scannerVersion: string;
+  authConfig?: {
+    authType: string;
+    headerName?: string;
+  };
+  discoveryMetadata?: {
+    source: string;
+    endpointCount: number;
+    version: string;
+    parsedSuccessfully: boolean;
+  };
+  fingerprint?: {
+    server: { name: string; confidence: string };
+    framework: { name: string; confidence: string };
+    hosting: { name: string; confidence: string };
+    tls: string;
+    responseTime: number;
+  };
 }
 
 const scanSchema = new Schema<IScan>(
@@ -68,6 +85,32 @@ const scanSchema = new Schema<IScan>(
     scannerVersion: {
       type: String,
       default: '1.0.0',
+    },
+    authConfig: {
+      authType: { type: String, default: 'None' },
+      headerName: { type: String },
+    },
+    discoveryMetadata: {
+      source: { type: String, default: 'Recon Probing' },
+      endpointCount: { type: Number, default: 1 },
+      version: { type: String, default: 'N/A' },
+      parsedSuccessfully: { type: Boolean, default: false },
+    },
+    fingerprint: {
+      server: {
+        name: { type: String, default: 'Unknown' },
+        confidence: { type: String, default: 'LOW' },
+      },
+      framework: {
+        name: { type: String, default: 'Unknown' },
+        confidence: { type: String, default: 'LOW' },
+      },
+      hosting: {
+        name: { type: String, default: 'Unknown' },
+        confidence: { type: String, default: 'LOW' },
+      },
+      tls: { type: String, default: 'N/A' },
+      responseTime: { type: Number, default: 0 },
     },
   }
 );

@@ -1,0 +1,707 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "API Sentinel Security Scanner",
+    "description": "Backend API documentation for the API Sentinel AI-powered security scanner. Provides JWT authentication, scan target orchestration, real-time results retrieval, AI-enriched explanations, and PDF report downloads.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "API Sentinel Team",
+      "email": "support@sentinel.local"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000",
+      "description": "Local Development Server"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Retrieve Service Health Status",
+        "description": "Returns the status, service name, and version of the API Sentinel backend service.",
+        "responses": {
+          "200": {
+            "description": "Service is healthy and running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "summary": "Register a New User",
+        "description": "Registers a new user account and returns a JWT token.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed / User already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Authenticate User / Login",
+        "description": "Logs in an existing user and returns a JWT token inside cookies and body.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Logged in successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/profile": {
+      "get": {
+        "summary": "Retrieve User Profile",
+        "description": "Retrieves details of the currently authenticated user.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User profile fetched successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scan": {
+      "post": {
+        "summary": "Configure a New Scan Target",
+        "description": "Creates a new scan configuration in the database for the given target URL.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "targetUrl"
+                ],
+                "properties": {
+                  "targetUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "example": "http://localhost:8000/test-vulnerabilities"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Scan configured successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Scan created successfully"
+                    },
+                    "scan": {
+                      "$ref": "#/components/schemas/Scan"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid URL target or validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scans": {
+      "get": {
+        "summary": "Retrieve User Scans and Dashboard Stats",
+        "description": "Returns all scan targets configured by the logged-in user, along with dashboard statistics.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Scans and stats retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "scans": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Scan"
+                      }
+                    },
+                    "stats": {
+                      "$ref": "#/components/schemas/DashboardStats"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scan/{id}": {
+      "get": {
+        "summary": "Retrieve Scan Details & Vulnerability Findings",
+        "description": "Returns the details of a single scan config along with all detected vulnerabilities and AI security recommendations.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The unique identifier of the scan",
+            "schema": {
+              "type": "string",
+              "example": "651a2e4125fdab31cc8d41e2"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Scan details and findings retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "scan": {
+                      "$ref": "#/components/schemas/Scan"
+                    },
+                    "findings": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Vulnerability"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Scan not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a Scan Configuration",
+        "description": "Deletes the scan configuration and all its associated vulnerability findings and PDF records.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The unique identifier of the scan to delete",
+            "schema": {
+              "type": "string",
+              "example": "651a2e4125fdab31cc8d41e2"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Scan deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Scan and associated data deleted successfully"
+                    },
+                    "scanId": {
+                      "type": "string",
+                      "example": "651a2e4125fdab31cc8d41e2"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scan/start/{id}": {
+      "post": {
+        "summary": "Execute Security Scan",
+        "description": "Triggers the execution of the Python security checks against the target URL. Saves results and enriches vulnerabilities with Gemini AI recommendations.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The unique identifier of the scan target to run",
+            "schema": {
+              "type": "string",
+              "example": "651a2e4125fdab31cc8d41e2"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Scan executed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Scan completed successfully"
+                    },
+                    "scan": {
+                      "$ref": "#/components/schemas/Scan"
+                    },
+                    "findings": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Vulnerability"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Scanner connection failed or scan error occurred",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scan/{id}/pdf": {
+      "get": {
+        "summary": "Export Scan Report as PDF",
+        "description": "Generates and downloads a highly styled, professional PDF assessment report containing target details, score, severity breakdown, and AI recommendations.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The unique identifier of the completed scan",
+            "schema": {
+              "type": "string",
+              "example": "651a2e4125fdab31cc8d41e2"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PDF generated and returned as a file download",
+            "headers": {
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string",
+                  "example": "attachment; filename=\"API-Sentinel-Report-651a2e4125fdab31cc8d41e2.pdf\""
+                }
+              }
+            },
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok"
+          },
+          "service": {
+            "type": "string",
+            "example": "backend"
+          },
+          "version": {
+            "type": "string",
+            "example": "1.0.0"
+          }
+        }
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "admin@sentinel.local"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 6,
+            "example": "securepass123"
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "admin@sentinel.local"
+          },
+          "password": {
+            "type": "string",
+            "example": "securepass123"
+          }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Login successful"
+          },
+          "token": {
+            "type": "string",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "example": "651a2e4125fdab31cc8d41de"
+              },
+              "email": {
+                "type": "string",
+                "example": "admin@sentinel.local"
+              },
+              "role": {
+                "type": "string",
+                "example": "user"
+              }
+            }
+          }
+        }
+      },
+      "ProfileResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "651a2e4125fdab31cc8d41de"
+          },
+          "email": {
+            "type": "string",
+            "example": "admin@sentinel.local"
+          },
+          "role": {
+            "type": "string",
+            "example": "user"
+          }
+        }
+      },
+      "Scan": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "651a2e4125fdab31cc8d41e2"
+          },
+          "targetUrl": {
+            "type": "string",
+            "example": "http://localhost:8000/test-vulnerabilities"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "SCANNING",
+              "COMPLETED",
+              "FAILED"
+            ],
+            "example": "COMPLETED"
+          },
+          "score": {
+            "type": "number",
+            "example": 85
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-06-26T09:30:50.000Z"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-06-26T09:32:10.000Z"
+          },
+          "durationMs": {
+            "type": "number",
+            "example": 1540
+          },
+          "totalEndpointsScanned": {
+            "type": "number",
+            "example": 4
+          }
+        }
+      },
+      "DashboardStats": {
+        "type": "object",
+        "properties": {
+          "totalScans": {
+            "type": "number",
+            "example": 3
+          },
+          "averageScore": {
+            "type": "number",
+            "example": 92
+          },
+          "criticalFindings": {
+            "type": "number",
+            "example": 1
+          },
+          "lastScanTime": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "example": "2026-06-26T09:32:10.000Z"
+          }
+        }
+      },
+      "Vulnerability": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "651a2e4125fdab31cc8d41f5"
+          },
+          "endpoint": {
+            "type": "string",
+            "example": "/test-vulnerabilities"
+          },
+          "method": {
+            "type": "string",
+            "example": "GET"
+          },
+          "issue": {
+            "type": "string",
+            "example": "Missing Security Headers"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "CRITICAL",
+              "HIGH",
+              "MEDIUM",
+              "LOW"
+            ],
+            "example": "LOW"
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "HIGH",
+              "MEDIUM",
+              "LOW"
+            ],
+            "example": "HIGH"
+          },
+          "description": {
+            "type": "string",
+            "example": "The HTTP response does not include standard security-oriented headers."
+          },
+          "recommendation": {
+            "type": "string",
+            "example": "Configure the web server or application framework to send X-Frame-Options and Content-Security-Policy headers."
+          },
+          "aiExplanation": {
+            "type": "string",
+            "example": "The application is missing headers like X-Frame-Options, exposing it to clickjacking attacks."
+          },
+          "aiImpact": {
+            "type": "string",
+            "example": "Attackers can embed your site inside an iframe to hijack user clicks."
+          },
+          "aiFix": {
+            "type": "string",
+            "example": "Use Helmet middleware to apply secure headers in Express.js."
+          },
+          "codeExample": {
+            "type": "string",
+            "example": "const helmet = require('helmet');\napp.use(helmet());"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "example": "Invalid credentials provided."
+          },
+          "errorCode": {
+            "type": "string",
+            "example": "UNAUTHORIZED"
+          }
+        }
+      }
+    }
+  }
+}

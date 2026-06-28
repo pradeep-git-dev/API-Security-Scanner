@@ -10,6 +10,7 @@ export enum Severity {
   MEDIUM = 'MEDIUM',
   HIGH = 'HIGH',
   CRITICAL = 'CRITICAL',
+  INFO = 'INFO',
 }
 
 export enum Confidence {
