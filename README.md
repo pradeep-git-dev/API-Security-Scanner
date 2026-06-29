@@ -35,11 +35,81 @@ API Sentinel utilizes a modern, 5-tier architecture that segregates the presenta
                                             +---------------------+
 ```
 
-### Technical Workflow
-1. **Frontend (Next.js)**: Provides an interactive dashboard for users to authenticate, configure target APIs, track scan history, inspect findings, and download reports.
-2. **Backend (Express/TS)**: Manages authentication (JWT), tracks scan records in **MongoDB**, generates PDF reports, and exposes a Swagger UI for API documentation.
-3. **Scanner (FastAPI/Python)**: Performs high-speed, parallel network checks against the target API endpoints using `asyncio` and `aiohttp`.
-4. **AI Engine (Gemini 1.5 Flash)**: Receives raw findings and dynamically generates contextual security explanations, impact statements, and exact secure code examples.
+## 🔄 End-to-End Application Workflow
+
+API Sentinel operates on a highly coordinated multi-step scanning and intelligence pipeline. Here is the step-by-step workflow:
+
+```mermaid
+graph TD
+    A["User/Frontend Dashboard"] -->|1. Setup Target & Auth Config| B("Express Gateway Backend")
+    B -->|2. Persist Target / Set Status: PENDING| C[("MongoDB Database")]
+    B -->|3. Trigger Scan Request| D("FastAPI Python Scanner")
+    
+    subgraph FastAPI Scanning Suite
+        D -->|4a. URL & Input Validation| E["Validator Modules"]
+        D -->|4b. Fingerprint Server, TLS, & Framework| F["Fingerprint Module"]
+        D -->|4c. Parse Endpoint Path Tree| G["OpenAPI Parser"]
+        D -->|4d. Run Parallel Probes| H["Vulnerability Check Engines"]
+    end
+    
+    H -->|SQLi, JWT, CORS, Rate Limit, Data Exposure| I["Raw Scan Findings"]
+    I -->|5. Return JSON Report Payload| B
+    
+    subgraph AI Security Enrichment
+        B -->|6a. Send Raw Vulnerabilities| J["Google Gemini AI Engine"]
+        J -->|6b. Generate Contextual Remediation & Fixes| K["Enriched Findings"]
+    end
+    
+    K -->|7. Calculate Scoring & Posture Drift| B
+    B -->|8. Persist Findings & PDF Report| C
+    B -->|9. Update Status: COMPLETED| A
+    A -->|10. View Interactive Reports & Download PDF| L["User UI / PDFKit Report"]
+```
+
+### Detailed Execution Phase Breakdown
+
+1. **Scan Initialization (Frontend & Backend)**
+   * The user registers a target API URL inside the Next.js Dashboard. Optionally, the user can configure authentication criteria (e.g., Bearer token, Custom Header, Basic Auth) and upload an OpenAPI Specification.
+   * The Next.js frontend sends a `POST /scan` payload to the Express Backend Gateway.
+   * The Express Backend validates the request schema (using Zod), saves a scan instance in **MongoDB** initialized to a `PENDING` state, and returns the scan info.
+
+2. **Trigger Scan & Environment Reconnaissance (Backend to FastAPI)**
+   * When the user clicks **Start Scan**, the frontend sends a `POST /scan/start/:id` request containing transient credentials (never stored in DB).
+   * The Backend sets the database scan status to `SCANNING` and routes the request to the high-performance Python FastAPI service.
+   * The Scanner immediately runs URL validation and checks if TLS/HTTPS is enforced.
+   * The **Fingerprinting Engine** analyzes headers and response signatures to deduce the target server (e.g., Nginx, Apache), application framework (e.g., Express, FastAPI), hosting environment (e.g., AWS, Heroku), and connection latency.
+
+3. **Discovery & Crawling Tree Resolution**
+   * If an OpenAPI specification was provided, the scanner parses it to extract every declared route and supported HTTP verb (GET, POST, etc.) and maps them as an endpoint tree.
+   * If no OpenAPI spec is provided, it targets the primary root URL.
+   * To keep scans fast and optimized, the scanner compiles a list of up to 10 unique target endpoints to query in parallel.
+
+4. **Vulnerability Probing & Security Test Suite**
+   * The scanner spawns asynchronous HTTP client tasks (`aiohttp`) to inspect each target endpoint using dedicated checking modules:
+     * **SQL Injection (SQLi)**: Tests input parameters using SQL syntax disclosures and blind sleep-delay queries.
+     * **Broken Authentication & JWT Checks**: Inspects authorization mechanisms, analyzing tokens for weak signing keys or "none" algorithm bypasses.
+     * **Excessive Data Exposure**: Evaluates response bodies against regex lists looking for leaked environment files, AWS keys, database connection strings, JWTs, and private keys.
+     * **CORS Policies**: Probes headers to detect wildcards (`*`) or unreflected origin vulnerabilities.
+     * **Rate Limiting Checks**: Floods the endpoint to determine if rate limit blocks (HTTP 429) or throttling features are in place.
+     * **HTTP Security Headers**: Checks for standard defensive headers (CSP, HSTS, X-Frame-Options, X-Content-Type-Options).
+
+5. **AI Enrichment and Remediation Generation (Gemini AI)**
+   * The FastAPI scanner packages all security check findings, calculates a security score and returns the payload to the Backend.
+   * The Express Backend receives raw findings and filters out passed checks and informational messages.
+   * For every actual vulnerability found, the Backend invokes **Google Gemini AI** (using Gemini 1.5/3.5 Flash).
+   * Gemini analyzes the raw vulnerability context and generates:
+     * A developer-focused description of the risk.
+     * An impact assessment explaining how an attacker could exploit it.
+     * An exact secure refactoring block (code patch) to remediate the vulnerability.
+   * These enriched details are dynamically saved back to the database.
+
+6. **Historical Posture Comparison (Drift Analysis)**
+   * The Backend queries the database for the user's previous completed scan against the same target URL.
+   * The comparison service performs **Drift Analysis** to compute the security score change, identifies new vulnerabilities, and marks resolved issues.
+
+7. **PDF Reporting & Frontend Presentation**
+   * The Express backend utilizes `PDFKit` to compile a professional, print-ready PDF audit containing visual security scores, category breakdowns, and AI-generated code patches.
+   * The scan status changes to `COMPLETED`. The Next.js dashboard receives the update and renders dynamic charts, severity indicators, interactive code editors with the secure fixes, and a download link for the PDF report.
 
 ---
 
