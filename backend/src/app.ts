@@ -43,9 +43,23 @@ app.use((req, res, next) => {
 });
 
 // Setup standard middlewares
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://api-security-scanner-5b02.onrender.com",
+];
+
+console.log("FRONTEND_URL:", process.env.FRONTEND_URL);
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.log("Blocked Origin:", origin);
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
