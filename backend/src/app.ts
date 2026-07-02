@@ -11,7 +11,7 @@ import { getUserProfile } from './controllers/authController';
 import { protect } from './middleware/authMiddleware';
 import { errorHandler } from './middleware/errorHandler';
 
-const swaggerDocument = require('./config/swagger.json');
+import swaggerDocument from './config/swagger.json';
 
 // Initialize environment variables
 dotenv.config();
