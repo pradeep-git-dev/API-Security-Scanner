@@ -83,8 +83,10 @@ export default function DashboardPage() {
     } catch (err: any) {
       console.error(err);
       if (err.response?.status === 401) {
-        localStorage.removeItem('token');
-        router.push('/login');
+        console.log("Status:", err.response?.status);
+        console.log("Data:", err.response?.data);
+        console.log("Headers:", err.response?.headers);
+        alert(JSON.stringify(err.response?.data));
       } else {
         setError('Failed to fetch scans. Please try again.');
       }
