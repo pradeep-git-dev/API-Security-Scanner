@@ -69,6 +69,8 @@ export const getUserScans = async (req: AuthenticatedRequest, res: Response) => 
       return res.status(401).json({ message: 'Not authorized' });
     }
 
+    console.log("req.user:", req.user);
+
     const scans = await Scan.find({ userId: req.user.id }).sort({ createdAt: -1 });
 
     const totalScans = scans.length;

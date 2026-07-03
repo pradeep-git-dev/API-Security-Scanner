@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { AuthenticatedRequest, AuthenticatedUser } from '../types';
 
 export const protect = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  console.log("Authorization:", req.headers.authorization);
   let token: string | undefined;
 
   // Retrieve token from Authorization header (Bearer <token>)
@@ -20,6 +21,7 @@ export const protect = (req: AuthenticatedRequest, res: Response, next: NextFunc
   try {
     const secret = process.env.JWT_SECRET || 'super_secret_jwt_key_12345_!@#$%';
     const decoded = jwt.verify(token, secret) as AuthenticatedUser;
+    console.log("Decoded:", decoded);
     
     // Attach user payload to request context
     req.user = {
