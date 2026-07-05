@@ -66,6 +66,11 @@ export const scanTarget = async (
   }
 ): Promise<ScanResult> => {
   try {
+    console.log({
+      targetUrl,
+      openApiSpec,
+      authConfig
+    });
     const response = await axios.post<ScanResult>(`${SCANNER_URL}/scan`, {
       targetUrl,
       openApiSpec,
@@ -73,7 +78,9 @@ export const scanTarget = async (
     });
     return response.data;
   } catch (error: any) {
-    console.error('Error calling scanner service:', error.message || error);
-    throw new Error('Failed to communicate with scanner service');
+    console.error("Status:", error.response?.status);
+    console.error("Response:", error.response?.data);
+    console.error("Message:", error.message);
+    throw error;
   }
 };
