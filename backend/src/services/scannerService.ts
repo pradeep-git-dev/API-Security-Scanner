@@ -91,6 +91,10 @@ export const scanTarget = async (
       openApiSpec,
       authConfig
     });
+
+    // Auto-wake the scanner service
+    await wakeScanner();
+
     const response = await axios.post<ScanResult>(`${SCANNER_URL}/scan`, {
       targetUrl,
       openApiSpec,
