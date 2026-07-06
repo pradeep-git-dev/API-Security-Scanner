@@ -193,6 +193,9 @@ mongodb://localhost:27017/
    ```
    *The scanner service will start on **`http://localhost:8000`**.*
 
+> [!NOTE]
+> **Cold Start Auto-Wake**: The backend is configured to automatically ping the scanner's `/health` endpoint with retries before initiating a scan. This wakes up the scanner service in hosting environments where the service might sleep due to inactivity (e.g. Render free tier).
+
 ### 4. Frontend Application
 1. Navigate to the `frontend/` directory:
    ```bash
