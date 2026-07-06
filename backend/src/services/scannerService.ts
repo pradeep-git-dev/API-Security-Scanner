@@ -54,6 +54,26 @@ export interface ScanResult {
 
 const SCANNER_URL = process.env.SCANNER_URL || 'http://localhost:8000';
 
+const wakeScanner = async (): Promise<void> => {
+  console.log(`Checking if scanner is awake at ${SCANNER_URL}/health...`);
+  const maxRetries = 20; // 20 retries * 3 seconds = 60 seconds max
+  const delayMs = 3000;
+
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      await axios.get(`${SCANNER_URL}/health`, { timeout: 5000 });
+      console.log('Scanner is awake and healthy!');
+      return;
+    } catch (err: any) {
+      console.log(`Scanner not ready yet (attempt ${i + 1}/${maxRetries}): ${err.message}`);
+      if (i < maxRetries - 1) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+  console.warn('Scanner did not wake up in time, proceeding with scan anyway...');
+};
+
 export const scanTarget = async (
   targetUrl: string,
   openApiSpec?: string,
