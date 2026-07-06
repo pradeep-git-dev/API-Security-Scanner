@@ -12,6 +12,8 @@ export interface IScan extends Document {
   startedAt: Date;
   completedAt?: Date;
   durationMs?: number;
+  wakeDurationMs?: number;
+  scanDurationMs?: number;
   totalEndpointsScanned: number;
   scannerVersion: string;
   authConfig?: {
@@ -76,6 +78,12 @@ const scanSchema = new Schema<IScan>(
       type: Date,
     },
     durationMs: {
+      type: Number,
+    },
+    wakeDurationMs: {
+      type: Number,
+    },
+    scanDurationMs: {
       type: Number,
     },
     totalEndpointsScanned: {

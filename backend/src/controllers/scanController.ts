@@ -5,7 +5,7 @@ import Report from '../models/Report';
 import ScanLog from '../models/ScanLog';
 import { createScanSchema } from '../validators/scanValidator';
 import { AuthenticatedRequest } from '../types';
-import { scanTarget, ScanResult } from '../services/scannerService';
+import { scanTarget, ScanResult, ScanExecutionResult } from '../services/scannerService';
 import { enrichVulnerability } from '../services/aiService';
 import { generateScanPDF } from '../services/pdfService';
 import { calculateDrift } from '../services/comparisonService';
@@ -208,8 +208,13 @@ export const triggerScan = async (req: AuthenticatedRequest, res: Response) => {
 
     // 3. Invoke FastAPI service passing transient OpenAPI spec and authConfig
     let scanResult: ScanResult;
+    let wakeDurationMs = 0;
+    let scanDurationMs = 0;
     try {
-      scanResult = await scanTarget(scan.targetUrl, openApiSpec, pythonAuthConfig);
+      const executionResult = await scanTarget(scan.targetUrl, openApiSpec, pythonAuthConfig);
+      scanResult = executionResult.scanResult;
+      wakeDurationMs = executionResult.wakeDurationMs;
+      scanDurationMs = executionResult.scanDurationMs;
     } catch (scanErr: any) {
       scan.status = 'FAILED' as any;
       await scan.save();
@@ -348,6 +353,8 @@ export const triggerScan = async (req: AuthenticatedRequest, res: Response) => {
     scan.status = 'COMPLETED' as any;
     scan.completedAt = new Date();
     scan.durationMs = durationMs;
+    scan.wakeDurationMs = wakeDurationMs;
+    scan.scanDurationMs = scanDurationMs;
     scan.score = scanResult.score;
     scan.totalEndpointsScanned = scanResult.discoveryMetadata?.endpointCount || 1;
     
@@ -364,6 +371,13 @@ export const triggerScan = async (req: AuthenticatedRequest, res: Response) => {
     });
   } catch (error: any) {
     console.error('Trigger scan error:', error);
+    if (error.name === 'ScannerError' || error.status) {
+      return res.status(error.statusCode || 500).json({
+        status: error.status,
+        message: error.message,
+        retryable: error.retryable !== undefined ? error.retryable : true
+      });
+    }
     return res.status(500).json({ message: error.message || 'Server error during scan execution' });
   }
 };

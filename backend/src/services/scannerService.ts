@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { SCANNER_CONFIG } from '../config/scannerConfig';
+import { waitForScanner, ScannerError } from './scannerWakeService';
 
 export interface VulnerabilityFinding {
   findingId?: string;
@@ -54,21 +56,11 @@ export interface ScanResult {
 
 const SCANNER_URL = process.env.SCANNER_URL || 'http://localhost:8000';
 
-const wakeScanner = async (): Promise<void> => {
-  try {
-    await axios.get(`${SCANNER_URL}/health`, {
-      timeout: 10000,
-    });
-  } catch {
-    // Scanner is probably still starting
-    await new Promise((resolve) => setTimeout(resolve, 5000));
-
-    // Try once more
-    await axios.get(`${SCANNER_URL}/health`, {
-      timeout: 10000,
-    });
-  }
-};
+export interface ScanExecutionResult {
+  scanResult: ScanResult;
+  wakeDurationMs: number;
+  scanDurationMs: number;
+}
 
 export const scanTarget = async (
   targetUrl: string,
@@ -80,7 +72,7 @@ export const scanTarget = async (
     username?: string;
     password?: string;
   }
-): Promise<ScanResult> => {
+): Promise<ScanExecutionResult> => {
   try {
     console.log({
       targetUrl,
@@ -88,16 +80,78 @@ export const scanTarget = async (
       authConfig
     });
 
-    // Auto-wake the scanner service
-    await wakeScanner();
+    // 1. Wait for the scanner to be awake and measure the wake duration
+    const { wakeDurationMs } = await waitForScanner();
 
-    const response = await axios.post<ScanResult>(`${SCANNER_URL}/scan`, {
-      targetUrl,
-      openApiSpec,
-      authConfig,
-    });
-    return response.data;
+    // 2. Perform the scan request with retries on transient errors
+    const scanStartTime = Date.now();
+    let lastError: any;
+    let scanResult: ScanResult | null = null;
+
+    for (let attempt = 0; attempt <= SCANNER_CONFIG.maxScanRetries; attempt++) {
+      try {
+        const response = await axios.post<ScanResult>(
+          `${SCANNER_URL}/scan`,
+          { targetUrl, openApiSpec, authConfig },
+          { timeout: SCANNER_CONFIG.scanTimeout }
+        );
+        scanResult = response.data;
+        break;
+      } catch (err: any) {
+        lastError = err;
+
+        // Determine if it is a transient infrastructure error
+        const isTransient =
+          err.code === 'ECONNREFUSED' ||
+          err.code === 'ECONNRESET' ||
+          err.code === 'ETIMEDOUT' ||
+          err.code === 'EAI_AGAIN' ||
+          err.response?.status === 502 ||
+          err.response?.status === 503 ||
+          err.response?.status === 504;
+
+        if (isTransient && attempt < SCANNER_CONFIG.maxScanRetries) {
+          console.warn(
+            `[Scanner Service] Scan request failed (attempt ${attempt + 1}/${
+              SCANNER_CONFIG.maxScanRetries + 1
+            }) due to transient error: ${err.message}. Retrying in 5s...`
+          );
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+        } else {
+          break;
+        }
+      }
+    }
+
+    if (!scanResult) {
+      // Wrap transient connect errors to return structured response
+      if (
+        lastError.code === 'ECONNREFUSED' ||
+        lastError.code === 'ECONNRESET' ||
+        lastError.code === 'ETIMEDOUT' ||
+        lastError.code === 'EAI_AGAIN'
+      ) {
+        throw new ScannerError(
+          'SCANNER_UNAVAILABLE',
+          `Scanner service is unavailable: ${lastError.message}`,
+          true,
+          503
+        );
+      }
+      throw lastError;
+    }
+
+    const scanDurationMs = Date.now() - scanStartTime;
+
+    return {
+      scanResult,
+      wakeDurationMs,
+      scanDurationMs,
+    };
   } catch (error: any) {
+    if (error.name === 'ScannerError') {
+      throw error;
+    }
     console.error("Status:", error.response?.status);
     console.error("Response:", error.response?.data);
     console.error("Message:", error.message);

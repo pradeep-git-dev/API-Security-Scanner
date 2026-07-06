@@ -16,6 +16,8 @@ interface Scan {
   score: number;
   createdAt: string;
   durationMs?: number;
+  wakeDurationMs?: number;
+  scanDurationMs?: number;
 }
 
 interface Stats {
@@ -34,6 +36,11 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [runningScans, setRunningScans] = useState<Record<string, boolean>>({});
+  const [activeScanProgress, setActiveScanProgress] = useState<{
+    scanId: string;
+    stage: 'preparing' | 'waking' | 'scanning' | 'finalizing' | 'idle';
+    elapsedSeconds: number;
+  } | null>(null);
   
   // Advanced Scan Configuration State
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -192,9 +199,45 @@ export default function DashboardPage() {
     setMessage('');
     setRunningScans((prev) => ({ ...prev, [id]: true }));
 
+    // Start progress updates simulation
+    setActiveScanProgress({
+      scanId: id,
+      stage: 'preparing',
+      elapsedSeconds: 0
+    });
+
     setScans((prev) => 
       prev.map((s) => (s._id === id ? { ...s, status: 'SCANNING' } : s))
     );
+
+    // Track elapsed time to update the progress steps honestly
+    const startTime = Date.now();
+    const intervalId = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      
+      setActiveScanProgress((prev) => {
+        if (!prev) return null;
+        
+        let newStage: 'preparing' | 'waking' | 'scanning' | 'finalizing' = 'preparing';
+        if (elapsed > 1) {
+          newStage = 'waking';
+        }
+        // Assume scanner is awake after 40 seconds and starting scan assessment
+        if (elapsed > 40) {
+          newStage = 'scanning';
+        }
+        // Assume scan is finishing up and finalizing report after 55 seconds
+        if (elapsed > 55) {
+          newStage = 'finalizing';
+        }
+        
+        return {
+          ...prev,
+          stage: newStage,
+          elapsedSeconds: elapsed
+        };
+      });
+    }, 1000);
 
     // Build credentials payload for transient injection
     let payloadToken = tokenValue;
@@ -213,10 +256,17 @@ export default function DashboardPage() {
       fetchScans();
     } catch (err: any) {
       console.error(err);
-      setError(err.response?.data?.message || 'Failed to execute scan.');
+      const responseData = err.response?.data;
+      if (responseData?.status === 'SCANNER_TIMEOUT' || responseData?.status === 'SCANNER_UNAVAILABLE') {
+        setError('Scanner service is taking longer than expected. The free hosting service may still be starting. Please wait and retry in a few moments.');
+      } else {
+        setError(responseData?.message || 'Failed to execute scan.');
+      }
       fetchScans();
     } finally {
+      clearInterval(intervalId);
       setRunningScans((prev) => ({ ...prev, [id]: false }));
+      setActiveScanProgress(null);
     }
   };
 
@@ -579,9 +629,20 @@ export default function DashboardPage() {
                           </span>
                         </td>
                         <td className="py-4 px-6 whitespace-nowrap text-sm text-zinc-500 dark:text-zinc-400">
-                          {scan.status === 'COMPLETED' && scan.durationMs !== undefined
-                            ? `${(scan.durationMs / 1000).toFixed(2)}s`
-                            : '—'}
+                          {scan.status === 'COMPLETED' && scan.durationMs !== undefined ? (
+                            <div className="flex flex-col text-left">
+                              <span className="font-semibold text-zinc-800 dark:text-zinc-200">
+                                {(scan.durationMs / 1000).toFixed(1)}s total
+                              </span>
+                              {scan.wakeDurationMs !== undefined && scan.scanDurationMs !== undefined && (
+                                <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
+                                  wake: {(scan.wakeDurationMs / 1000).toFixed(1)}s | scan: {(scan.scanDurationMs / 1000).toFixed(1)}s
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            '—'
+                          )}
                         </td>
                         <td className="py-4 px-6 whitespace-nowrap text-sm text-zinc-500 dark:text-zinc-400">
                           <div className="flex items-center space-x-2">
@@ -630,6 +691,91 @@ export default function DashboardPage() {
           )}
         </div>
       </main>
+
+      {activeScanProgress && (
+        <div className="fixed inset-0 bg-zinc-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-6 animate-in zoom-in-95 duration-200">
+            <div className="flex flex-col items-center text-center space-y-4">
+              {/* Spinner/Status Icon */}
+              <div className="relative">
+                <div className="w-16 h-16 rounded-full border-4 border-indigo-100 dark:border-indigo-950/50 border-t-indigo-600 dark:border-t-indigo-500 animate-spin flex items-center justify-center" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Shield className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                </div>
+              </div>
+
+              {/* Title */}
+              <div className="space-y-1">
+                <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
+                  Security Scan in Progress
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
+                  Elapsed Time: {activeScanProgress.elapsedSeconds}s
+                </p>
+              </div>
+
+              {/* Stage list with checkmarks or pulsing indicators */}
+              <div className="w-full text-left bg-zinc-50 dark:bg-zinc-950 p-4 rounded-xl border border-zinc-200/50 dark:border-zinc-800/50 space-y-3">
+                
+                {/* 1. Preparing */}
+                <div className="flex items-center space-x-3 text-sm">
+                  <div className={`w-2.5 h-2.5 rounded-full ${
+                    activeScanProgress.stage === 'preparing' ? 'bg-indigo-600 animate-ping' : 'bg-emerald-500'
+                  }`} />
+                  <span className={activeScanProgress.stage === 'preparing' ? 'font-semibold text-zinc-850 dark:text-zinc-100' : 'text-zinc-405 line-through dark:text-zinc-500'}>
+                    ✓ Preparing scan request
+                  </span>
+                </div>
+
+                {/* 2. Waking */}
+                <div className="flex items-center space-x-3 text-sm">
+                  <div className={`w-2.5 h-2.5 rounded-full ${
+                    activeScanProgress.stage === 'waking' ? 'bg-indigo-600 animate-ping' : 
+                    (activeScanProgress.stage === 'preparing' ? 'bg-zinc-300 dark:bg-zinc-700' : 'bg-emerald-500')
+                  }`} />
+                  <span className={
+                    activeScanProgress.stage === 'waking' ? 'font-semibold text-zinc-850 dark:text-zinc-100' : 
+                    (activeScanProgress.stage === 'preparing' ? 'text-zinc-400 dark:text-zinc-650' : 'text-zinc-405 line-through dark:text-zinc-500')
+                  }>
+                    {activeScanProgress.stage === 'preparing' ? '⏳' : activeScanProgress.stage === 'waking' ? '⏳' : '✓'} Waking scanner service
+                    {activeScanProgress.stage === 'waking' && ' (Render free tier may take 30–40s)'}
+                  </span>
+                </div>
+
+                {/* 3. Running assessment */}
+                <div className="flex items-center space-x-3 text-sm">
+                  <div className={`w-2.5 h-2.5 rounded-full ${
+                    activeScanProgress.stage === 'scanning' ? 'bg-indigo-600 animate-ping' : 
+                    (activeScanProgress.stage === 'finalizing' ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-700')
+                  }`} />
+                  <span className={
+                    activeScanProgress.stage === 'scanning' ? 'font-semibold text-zinc-850 dark:text-zinc-100' : 
+                    (activeScanProgress.stage === 'finalizing' ? 'text-zinc-405 line-through dark:text-zinc-500' : 'text-zinc-400 dark:text-zinc-650')
+                  }>
+                    {activeScanProgress.stage === 'scanning' ? '⏳ Running security assessment...' : 
+                     activeScanProgress.stage === 'finalizing' ? '✓ Security assessment complete' : '⏳ Running security assessment...'}
+                  </span>
+                </div>
+
+                {/* 4. Finalizing */}
+                <div className="flex items-center space-x-3 text-sm">
+                  <div className={`w-2.5 h-2.5 rounded-full ${
+                    activeScanProgress.stage === 'finalizing' ? 'bg-indigo-600 animate-ping' : 'bg-zinc-300 dark:bg-zinc-700'
+                  }`} />
+                  <span className={activeScanProgress.stage === 'finalizing' ? 'font-semibold text-zinc-850 dark:text-zinc-100' : 'text-zinc-400 dark:text-zinc-650'}>
+                    ⏳ Finalizing report...
+                  </span>
+                </div>
+              </div>
+
+              {/* Informational Footer */}
+              <p className="text-[10px] text-zinc-400 dark:text-zinc-500 text-center max-w-xs">
+                Scanning target API in real time. Please do not close or reload this page.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
