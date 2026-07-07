@@ -222,7 +222,7 @@ export const generateScanPDF = (scan: any, report: any, findings: any[]): Promis
         }
       }
 
-      addPageFooter(doc, 1);
+      // Footer will be added in final pass
 
       // --- DETAILED FINDINGS PAGES (GROUPED BY CATEGORY) ---
       const categoriesOrder = ['Security Findings', 'Observations', 'Passed Checks', 'Informational'];
@@ -240,7 +240,6 @@ export const generateScanPDF = (scan: any, report: any, findings: any[]): Promis
         catFindings.forEach((finding, index) => {
           // If we are close to the bottom of the page, add a new page
           if (currentY > 600) {
-            addPageFooter(doc, doc.bufferedPageRange().count);
             doc.addPage();
             doc.fillColor('#1e1b4b').rect(0, 0, doc.page.width, 40).fill();
             doc.fillColor('#ffffff').fontSize(11).font('Helvetica-Bold').text(`${category} (Continued)`, 50, 15);
@@ -321,7 +320,6 @@ export const generateScanPDF = (scan: any, report: any, findings: any[]): Promis
           // Secure Code Example (AI fix) if present
           if (finding.codeExample) {
             if (currentY > 500) {
-              addPageFooter(doc, doc.bufferedPageRange().count);
               doc.addPage();
               doc.fillColor('#1e1b4b').rect(0, 0, doc.page.width, 40).fill();
               doc.fillColor('#ffffff').fontSize(11).font('Helvetica-Bold').text(`${finding.issue} — Code Fix`, 50, 15);
@@ -347,8 +345,14 @@ export const generateScanPDF = (scan: any, report: any, findings: any[]): Promis
           currentY += 15;
         });
 
-        addPageFooter(doc, doc.bufferedPageRange().count);
       });
+
+      // Switch to each page and add footer
+      const range = doc.bufferedPageRange();
+      for (let i = 0; i < range.count; i++) {
+        doc.switchToPage(i);
+        addPageFooter(doc, i + 1, range.count);
+      }
 
       doc.end();
     } catch (err) {
@@ -357,11 +361,16 @@ export const generateScanPDF = (scan: any, report: any, findings: any[]): Promis
   });
 };
 
-const addPageFooter = (doc: PDFKit.PDFDocument, pageNum: number) => {
+const addPageFooter = (doc: PDFKit.PDFDocument, pageNum: number, totalPages: number) => {
   doc.save();
+  const oldBottomMargin = doc.page.margins.bottom;
+  doc.page.margins.bottom = 0;
+
   doc.strokeColor('#cbd5e1').lineWidth(0.5).moveTo(50, doc.page.height - 50).lineTo(doc.page.width - 50, doc.page.height - 50).stroke();
   doc.fillColor('#64748b').font('Helvetica').fontSize(8);
   doc.text('API Sentinel Security Assessment — Confidential Report', 50, doc.page.height - 42);
-  doc.text(`Page ${pageNum}`, doc.page.width - 90, doc.page.height - 42, { align: 'right', width: 40 });
+  doc.text(`Page ${pageNum} of ${totalPages}`, doc.page.width - 120, doc.page.height - 42, { align: 'right', width: 70 });
+
+  doc.page.margins.bottom = oldBottomMargin;
   doc.restore();
 };
