@@ -238,8 +238,10 @@ export const generateScanPDF = (scan: any, report: any, findings: any[]): Promis
         let currentY = 85;
 
         catFindings.forEach((finding, index) => {
-          // If we are close to the bottom of the page, add a new page
-          if (currentY > 600) {
+          // If the finding doesn't fit on the current page, and we are not already at the top of a page
+          const findingHeight = getFindingHeight(doc, finding);
+          const pageBottomLimit = doc.page.height - 60;
+          if (currentY > 85 && currentY + findingHeight > pageBottomLimit) {
             doc.addPage();
             doc.fillColor('#1e1b4b').rect(0, 0, doc.page.width, 40).fill();
             doc.fillColor('#ffffff').fontSize(11).font('Helvetica-Bold').text(`${category} (Continued)`, 50, 15);
@@ -319,23 +321,21 @@ export const generateScanPDF = (scan: any, report: any, findings: any[]): Promis
 
           // Secure Code Example (AI fix) if present
           if (finding.codeExample) {
-            if (currentY > 500) {
-              doc.addPage();
-              doc.fillColor('#1e1b4b').rect(0, 0, doc.page.width, 40).fill();
-              doc.fillColor('#ffffff').fontSize(11).font('Helvetica-Bold').text(`${finding.issue} — Code Fix`, 50, 15);
-              currentY = 60;
-            }
-            
             doc.font('Helvetica-Bold').fillColor('#3730a3').text('Secure Implementation Example:', 50, currentY);
             currentY += 14;
 
             const codeText = finding.codeExample;
+            // Calculate code text height dynamically
+            doc.font('Courier').fontSize(8);
+            const codeHeight = doc.heightOfString(codeText, { width: 490, lineGap: 2 });
+            const boxHeight = codeHeight + 20;
+
             // Draw background card for code
-            doc.fillColor('#1e293b').rect(50, currentY, 512, 100).fill();
-            doc.fillColor('#e2e8f0').font('Courier').fontSize(8);
-            doc.text(codeText, 60, currentY + 10, { width: 490, height: 80, lineGap: 2 });
+            doc.fillColor('#1e293b').rect(50, currentY, 512, boxHeight).fill();
+            doc.fillColor('#e2e8f0');
+            doc.text(codeText, 60, currentY + 10, { width: 490, lineGap: 2 });
             
-            currentY += 115;
+            currentY += boxHeight + 15;
           } else {
             currentY += 10;
           }
@@ -373,4 +373,65 @@ const addPageFooter = (doc: PDFKit.PDFDocument, pageNum: number, totalPages: num
 
   doc.page.margins.bottom = oldBottomMargin;
   doc.restore();
+};
+
+const getFindingHeight = (doc: PDFKit.PDFDocument, finding: any): number => {
+  let height = 0;
+
+  // Title / Issue name
+  doc.font('Helvetica-Bold').fontSize(11);
+  height += doc.heightOfString(finding.issue, { width: 420 }) + 10;
+
+  // Endpoint line
+  height += 15;
+
+  // Description
+  doc.font('Helvetica').fontSize(8.5);
+  height += 15 + doc.heightOfString(finding.description, { width: 512 }) + 8;
+
+  // Evidence
+  if (finding.evidence) {
+    let evidenceText = '';
+    const evidence = finding.evidence;
+    if (typeof evidence === 'object') {
+      if (evidence.type === 'missing_headers' && Array.isArray(evidence.details)) {
+        evidenceText = `Missing Headers: ${evidence.details.join(', ')}`;
+      } else if (Array.isArray(evidence.details)) {
+        evidenceText = evidence.details.map((line: string) => `• ${line}`).join('\n');
+      } else if (evidence.details) {
+        evidenceText = String(evidence.details);
+      } else {
+        evidenceText = JSON.stringify(evidence, null, 2);
+      }
+    } else {
+      evidenceText = String(evidence);
+    }
+
+    doc.font('Helvetica').fontSize(8.5);
+    height += 15 + doc.heightOfString(evidenceText, { width: 512 }) + 8;
+  }
+
+  // Impact
+  if (finding.impact && finding.impact !== 'None') {
+    doc.font('Helvetica').fontSize(8.5);
+    height += 15 + doc.heightOfString(finding.impact, { width: 512 }) + 8;
+  }
+
+  // Recommendation
+  if (finding.recommendation && finding.recommendation !== 'Informational only.') {
+    doc.font('Helvetica').fontSize(8.5);
+    height += 15 + doc.heightOfString(finding.recommendation, { width: 512 }) + 12;
+  }
+
+  // Code Example
+  if (finding.codeExample) {
+    doc.font('Courier').fontSize(8);
+    const codeHeight = doc.heightOfString(finding.codeExample, { width: 490, lineGap: 2 });
+    height += 15 + codeHeight + 20 + 15;
+  }
+
+  // Separator
+  height += 15;
+
+  return height;
 };
