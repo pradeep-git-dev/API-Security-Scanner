@@ -1,13 +1,41 @@
-# API Sentinel 🛡️
-### AI-Powered API Security Vulnerability Scanner
+# API Auditor 🛡️
+### Automated REST API Security Assessment Platform
 
-API Sentinel is a professional, high-performance web application designed to automatically audit, analyze, and secure REST APIs. It runs high-speed, asynchronous security probes against target endpoints and integrates with **Google Gemini AI** to provide developer-friendly explanations, risk impact assessments, and secure code remediations.
+[![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
+[![Gemini AI](https://img.shields.io/badge/Google%20Gemini-8E75C2?style=for-the-badge&logo=googlegemini&logoColor=white)](https://deepmind.google/technologies/gemini/)
+[![Render](https://img.shields.io/badge/Render-46E3B7?style=for-the-badge&logo=render&logoColor=black)](https://render.com/)
 
 ---
 
-## 🏗️ Architecture & Data Flow
+## 1. Project Title
+**API Auditor** — An automated REST API security assessment platform designed to identify vulnerabilities, map exploits to industry standards, and deliver AI-driven patches.
 
-API Sentinel utilizes a modern, 5-tier architecture that segregates the presentation, orchestration, scanning, and intelligence layers for optimal performance and scalability.
+---
+
+## 2. Overview
+API Auditor is a web application that helps developers secure their REST APIs. It runs high-speed, asynchronous security probes against target endpoints and integrates with **Google Gemini AI** to provide developer-friendly explanations, risk impact assessments, and secure code remediations.
+
+Analyze APIs for security misconfigurations, generate detailed reports, map findings to OWASP API Top 10 & CWE, and receive AI-powered remediation.
+
+---
+
+## 3. Key Features ⭐
+* **Asynchronous Scanner**: Built with Python asyncio & aiohttp to run parallel security checks in seconds.
+* **AI-Enriched Remediation**: Explains the impact of vulnerabilities and provides tailored code patches.
+* **Interactive Dashboard**: Track multiple target APIs, monitor security scores, and review scan history.
+* **Secure JWT Session Guard**: Sign-up and log-in options backed by JWT access tokens.
+* **Automated PDF Reports**: Exporter that packages scorecards and code fixes into print-ready PDF audits.
+* **Flexible Scanning Configuration**: Supports custom headers, Bearer tokens, and OpenAPI specifications.
+
+---
+
+## 4. Architecture
+API Auditor uses a multi-tier microservices architecture to segregate presentation, orchestration, scanning, and intelligence:
 
 ```
 +------------------+      HTTPS / JSON      +---------------------+
@@ -35,147 +63,48 @@ API Sentinel utilizes a modern, 5-tier architecture that segregates the presenta
                                             +---------------------+
 ```
 
-## 🔄 End-to-End Application Workflow
-
-API Sentinel operates on a highly coordinated multi-step scanning and intelligence pipeline. Here is the step-by-step workflow:
-
-```mermaid
-graph TD
-    A["User/Frontend Dashboard"] -->|1. Setup Target & Auth Config| B("Express Gateway Backend")
-    B -->|2. Persist Target / Set Status: PENDING| C[("MongoDB Database")]
-    B -->|3. Trigger Scan Request| D("FastAPI Python Scanner")
-    
-    subgraph FastAPI Scanning Suite
-        D -->|4a. URL & Input Validation| E["Validator Modules"]
-        D -->|4b. Fingerprint Server, TLS, & Framework| F["Fingerprint Module"]
-        D -->|4c. Parse Endpoint Path Tree| G["OpenAPI Parser"]
-        D -->|4d. Run Parallel Probes| H["Vulnerability Check Engines"]
-    end
-    
-    H -->|SQLi, JWT, CORS, Rate Limit, Data Exposure| I["Raw Scan Findings"]
-    I -->|5. Return JSON Report Payload| B
-    
-    subgraph AI Security Enrichment
-        B -->|6a. Send Raw Vulnerabilities| J["Google Gemini AI Engine"]
-        J -->|6b. Generate Contextual Remediation & Fixes| K["Enriched Findings"]
-    end
-    
-    K -->|7. Calculate Scoring & Posture Drift| B
-    B -->|8. Persist Findings & PDF Report| C
-    B -->|9. Update Status: COMPLETED| A
-    A -->|10. View Interactive Reports & Download PDF| L["User UI / PDFKit Report"]
-```
-
-### Detailed Execution Phase Breakdown
-
-1. **Scan Initialization (Frontend & Backend)**
-   * The user registers a target API URL inside the Next.js Dashboard. Optionally, the user can configure authentication criteria (e.g., Bearer token, Custom Header, Basic Auth) and upload an OpenAPI Specification.
-   * The Next.js frontend sends a `POST /scan` payload to the Express Backend Gateway.
-   * The Express Backend validates the request schema (using Zod), saves a scan instance in **MongoDB** initialized to a `PENDING` state, and returns the scan info.
-
-2. **Trigger Scan & Environment Reconnaissance (Backend to FastAPI)**
-   * When the user clicks **Start Scan**, the frontend sends a `POST /scan/start/:id` request containing transient credentials (never stored in DB).
-   * The Backend sets the database scan status to `SCANNING` and routes the request to the high-performance Python FastAPI service.
-   * The Scanner immediately runs URL validation and checks if TLS/HTTPS is enforced.
-   * The **Fingerprinting Engine** analyzes headers and response signatures to deduce the target server (e.g., Nginx, Apache), application framework (e.g., Express, FastAPI), hosting environment (e.g., AWS, Heroku), and connection latency.
-
-3. **Discovery & Crawling Tree Resolution**
-   * If an OpenAPI specification was provided, the scanner parses it to extract every declared route and supported HTTP verb (GET, POST, etc.) and maps them as an endpoint tree.
-   * If no OpenAPI spec is provided, it targets the primary root URL.
-   * To keep scans fast and optimized, the scanner compiles a list of up to 10 unique target endpoints to query in parallel.
-
-4. **Vulnerability Probing & Security Test Suite**
-   * The scanner spawns asynchronous HTTP client tasks (`aiohttp`) to inspect each target endpoint using dedicated checking modules:
-     * **SQL Injection (SQLi)**: Tests input parameters using SQL syntax disclosures and blind sleep-delay queries.
-     * **Broken Authentication & JWT Checks**: Inspects authorization mechanisms, analyzing tokens for weak signing keys or "none" algorithm bypasses.
-     * **Excessive Data Exposure**: Evaluates response bodies against regex lists looking for leaked environment files, AWS keys, database connection strings, JWTs, and private keys.
-     * **CORS Policies**: Probes headers to detect wildcards (`*`) or unreflected origin vulnerabilities.
-     * **Rate Limiting Checks**: Floods the endpoint to determine if rate limit blocks (HTTP 429) or throttling features are in place.
-     * **HTTP Security Headers**: Checks for standard defensive headers (CSP, HSTS, X-Frame-Options, X-Content-Type-Options).
-
-5. **AI Enrichment and Remediation Generation (Gemini AI)**
-   * The FastAPI scanner packages all security check findings, calculates a security score and returns the payload to the Backend.
-   * The Express Backend receives raw findings and filters out passed checks and informational messages.
-   * For every actual vulnerability found, the Backend invokes **Google Gemini AI** (using Gemini 1.5/3.5 Flash).
-   * Gemini analyzes the raw vulnerability context and generates:
-     * A developer-focused description of the risk.
-     * An impact assessment explaining how an attacker could exploit it.
-     * An exact secure refactoring block (code patch) to remediate the vulnerability.
-   * These enriched details are dynamically saved back to the database.
-
-6. **Historical Posture Comparison (Drift Analysis)**
-   * The Backend queries the database for the user's previous completed scan against the same target URL.
-   * The comparison service performs **Drift Analysis** to compute the security score change, identifies new vulnerabilities, and marks resolved issues.
-
-7. **PDF Reporting & Frontend Presentation**
-   * The Express backend utilizes `PDFKit` to compile a professional, print-ready PDF audit containing visual security scores, category breakdowns, and AI-generated code patches.
-   * The scan status changes to `COMPLETED`. The Next.js dashboard receives the update and renders dynamic charts, severity indicators, interactive code editors with the secure fixes, and a download link for the PDF report.
-
 ---
 
-## ✨ Features
-
-* **Secure Authentication**: Built-in signup, login, and token-based state preservation using JSON Web Tokens (JWT) and secure cookie backups.
-* **Asynchronous API Scanning**: Runs high-speed parallel probes against endpoints to detect vulnerabilities without blocking.
-* **OWASP-Inspired Security Checks**:
-  * **Transport Layer Security**: Verifies SSL/TLS enforcement and identifies unencrypted HTTP channels.
-  * **HTTP Security Headers**: Checks for missing defensive headers (`Content-Security-Policy`, `X-Frame-Options`, `X-Content-Type-Options`, `Strict-Transport-Security`).
-  * **SQL Injection (SQLi)**: Probes endpoints for SQL syntax error disclosures and time-delay vulnerabilities.
-  * **Excessive Data Exposure**: Analyzes responses for leaked secrets, credentials, API keys, or full database record projections.
-  * **Broken JWT Verification**: Tests for weak signing keys, insecure algorithms, or the `'none'` algorithm bypass.
-  * **Rate Limiting Checks**: Audits endpoints for API abuse protection.
-* **AI-Powered Threat Analysis**: Provides human-readable descriptions of security risks and exact copy-pasteable, secure refactoring snippets.
-* **Professional PDF Reporting**: Exports beautifully formatted PDF assessment reports including a security score, severity card breakdown, and AI remediations.
-* **Self-Documenting API**: Fully interactive Swagger UI available out of the box for testing backend endpoints.
-
----
-
-## 🛠️ Tech Stack
-
+## 5. Tech Stack
 * **Frontend**: Next.js 14, TypeScript, Tailwind CSS, Lucide Icons, Axios.
-* **Backend**: Node.js, Express, TypeScript, Mongoose, Swagger UI, PDFKit.
-* **Scanner**: Python 3, FastAPI, Uvicorn, aiohttp, asyncio.
+* **Backend Gateway**: Node.js, Express, TypeScript, Mongoose, PDFKit, Swagger UI.
+* **Scanner Engine**: Python 3.10+, FastAPI, Uvicorn, aiohttp, asyncio.
 * **Database**: MongoDB (Mongoose ODM).
-* **AI Core**: Google Gemini AI (via `@google/generative-ai` SDK) with high-quality offline fallbacks.
+* **AI Engine**: Google Gemini AI (via `@google/generative-ai` SDK).
 
 ---
 
-## 🚀 Installation & Setup
+## 6. Screenshots
+*(Coming soon)*
 
-Ensure you have **Node.js (v18+)**, **Python (v3.9+)**, and **MongoDB** installed and running locally.
+---
 
-### 1. Database Setup
-Ensure MongoDB is running locally on its default port:
-```bash
-mongodb://localhost:27017/
-```
+## 7. Live Deployment
+* **Frontend Application**: [https://api-security-scanner-5b02.onrender.com](https://api-security-scanner-5b02.onrender.com)
+* **Backend Gateway**: [https://api-security-scanner-backend.onrender.com](https://api-security-scanner-backend.onrender.com)
+* **FastAPI Scanner Service**: [https://api-security-scanner-fastapi.onrender.com/](https://api-security-scanner-fastapi.onrender.com/)
 
-### 2. Backend Gateway
-1. Navigate to the `backend/` directory:
+---
+
+## 8. Installation
+Ensure you have **Node.js (v18+)**, **Python (3.9+)**, and a running instance of **MongoDB** locally.
+
+### Backend Setup
+1. Open terminal and navigate to the backend directory:
    ```bash
    cd backend
    ```
-2. Install dependencies:
+2. Install Node dependencies:
    ```bash
    npm install
    ```
-3. Create a `.env` file from the template:
-   ```bash
-   cp .env.example .env
-   ```
-4. Update the variables in `.env` (add your `GEMINI_API_KEY` for live AI generation; if left empty, the application will automatically fall back to its robust offline security knowledge library).
-5. Start the development server:
-   ```bash
-   npm run dev
-   ```
-   *The backend will start on **`http://localhost:5000`**.*
 
-### 3. FastAPI Scanner Engine
-1. Navigate to the `scanner/` directory:
+### Scanner Setup
+1. Open terminal and navigate to the scanner directory:
    ```bash
    cd scanner
    ```
-2. Create a Python virtual environment and activate it:
+2. Create and activate a Python virtual environment:
    ```bash
    python -m venv venv
    # On Windows:
@@ -183,86 +112,204 @@ mongodb://localhost:27017/
    # On macOS/Linux:
    source venv/bin/activate
    ```
-3. Install the required Python libraries:
+3. Install required libraries:
    ```bash
    pip install -r requirements.txt
    ```
-4. Start the FastAPI service:
-   ```bash
-   uvicorn app:app --reload
-   ```
-   *The scanner service will start on **`http://localhost:8000`**.*
 
-> [!NOTE]
-> **Cold Start Auto-Wake**: The backend is configured to automatically ping the scanner's `/health` endpoint with retries before initiating a scan. This wakes up the scanner service in hosting environments where the service might sleep due to inactivity (e.g. Render free tier).
-
-### 4. Frontend Application
-1. Navigate to the `frontend/` directory:
+### Frontend Setup
+1. Open terminal and navigate to the frontend directory:
    ```bash
    cd frontend
    ```
-2. Install dependencies:
+2. Install npm dependencies:
    ```bash
    npm install
    ```
-3. Start the Next.js development server:
+
+---
+
+## 9. Environment Variables
+Create `.env` files in respective folders.
+
+### Backend Env (`backend/.env`)
+```env
+PORT=5000
+NODE_ENV=development
+MONGO_URI=mongodb://localhost:27017/api_sentinel
+JWT_SECRET=your_jwt_secret_key_here
+FRONTEND_URL=http://localhost:3000
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+### Frontend Env (`frontend/.env.local` or equivalent)
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5000
+```
+
+---
+
+## 10. Local Setup
+Follow these steps to run all three services concurrently in development mode:
+
+1. **Start MongoDB**: Ensure MongoDB is running on `mongodb://localhost:27017/`.
+2. **Start Backend Gateway**:
    ```bash
+   cd backend
    npm run dev
    ```
-   *The frontend will start on **`http://localhost:3000`**.*
+   *Runs on `http://localhost:5000` (API Docs available at `/api/docs`)*
+3. **Start FastAPI Scanner**:
+   ```bash
+   cd scanner
+   # Activate virtualenv first
+   uvicorn app:app --reload
+   ```
+   *Runs on `http://localhost:8000`*
+4. **Start Next.js Frontend**:
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+   *Runs on `http://localhost:3000`*
 
 ---
 
-## 📈 Screenshots
-
-### 1. Secure Authentication
-*Register and authenticate sessions with JWT-protected route guards.*
-*(Placeholder: `public/screenshots/login.png`)*
-
-### 2. Interactive Dashboard
-*Analyze all configured target scopes, check average security posture scores, and track recent runs.*
-*(Placeholder: `public/screenshots/dashboard.png`)*
-
-### 3. Detailed Scan Findings & AI Recommendations
-*Drill down into specific endpoints to view raw findings, confidence metrics, and Gemini AI-generated secure code blocks.*
-*(Placeholder: `public/screenshots/scan_details.png`)*
-
-### 4. Professional Swagger Documentation
-*Explore and interact with backend routes at `/api/docs` in real time.*
-*(Placeholder: `public/screenshots/swagger.png`)*
-
-### 5. Exported PDF Security Assessment
-*Download a highly styled, print-ready PDF assessment report for stakeholder review.*
-*(Placeholder: `public/screenshots/pdf_report.png`)*
+## 11. Usage
+1. **Register & Log In**: Access the frontend dashboard and create an account.
+2. **Configure Scan Target**:
+   * Input the target API's URL (e.g. `https://jsonplaceholder.typicode.com`).
+   * Select optional Auth Config (Bearer Token, Basic Auth, custom headers).
+   * (Optional) Paste an OpenAPI Specification JSON.
+3. **Run Scan**: Click **Start Scan** to trigger the assessment.
+4. **Inspect Findings**: Once complete, view the score card, expand vulnerability rows to inspect Gemini AI-generated remediation patches, and click **Download PDF Report**.
 
 ---
 
-## 🧭 API Reference
+## 12. Project Workflow
+The scanning process follows a sequential workflow:
 
-API Sentinel is self-documenting. Start the backend server and navigate to:
+```mermaid
+graph TD
+    A["User/Frontend Dashboard"] -->|1. Setup Target & Auth Config| B("Express Gateway Backend")
+    B -->|2. Save Scan / Set Status: PENDING| C[("MongoDB Database")]
+    B -->|3. Trigger Scan Request| D("FastAPI Python Scanner")
+    
+    subgraph FastAPI Scanning Suite
+        D -->|4a. Target Reconnaissance & Validation| E["Validators"]
+        D -->|4b. Execute Asynchronous Probes| F["Scanning Modules"]
+    end
+    
+    F -->|SQLi, CORS, JWT, Exposed Credentials| G["Raw Findings"]
+    G -->|5. Return JSON Report Payload| B
+    
+    subgraph AI Security Enrichment
+        B -->|6. Enrich Raw Vulnerabilities| H["Google Gemini AI"]
+        H -->|7. Generate Secure Code Remediation| I["Enriched Payload"]
+    end
+    
+    I -->|8. Save Findings & Render PDF| C
+    B -->|9. Update Status: COMPLETED| A
+    A -->|10. View Report & Download PDF| J["User Dashboard / PDFKit Report"]
 ```
-http://localhost:5000/api/docs
-```
-
-### Key Endpoints
-* **Health Check**: `GET /health` (Returns gateway health and version)
-* **Auth**:
-  * `POST /auth/register` (Create a new account)
-  * `POST /auth/login` (Authenticate credentials)
-  * `GET /profile` (Retrieve session profile details)
-* **Scanner**:
-  * `POST /scan` (Register target URL)
-  * `GET /scans` (Retrieve user scan targets and statistics)
-  * `GET /scan/{id}` (Retrieve target findings and AI analysis)
-  * `POST /scan/start/{id}` (Trigger security probe execution)
-  * `GET /scan/{id}/pdf` (Download formatted PDF assessment report)
 
 ---
 
-## 🔮 Future Roadmap
+## 13. Security Checks
+API Auditor executes a wide array of specialized test modules against target endpoints:
 
-API Sentinel is built with extension in mind. Key features planned for future releases include:
-1. **OpenAPI File Uploads**: Enable users to upload an `openapi.json` file to automatically parse, map, and scan all documented endpoints.
-2. **Queue-Based Scanning**: Implement **Redis** and **BullMQ** to run scans as background jobs, supporting longer timeout limits and queue scheduling.
-3. **WebSockets Integration**: Use **Socket.io** to stream live, real-time scanning progress updates and probe logs directly to the dashboard.
-4. **Additional OWASP API Checks**: Add dedicated fuzzing checks for Broken Object-Level Authorization (BOLA), Broken Function-Level Authorization (BFLA), and SSRF.
+* **Transport Layer Security**: Verifies if HTTPS is enforced and detects plaintext fallback.
+* **HTTP Security Headers**: Checks for standard security-related headers (`Content-Security-Policy`, `Strict-Transport-Security`, `X-Frame-Options`, `X-Content-Type-Options`).
+* **SQL Injection (SQLi)**: Sends active escape payloads and time-delay commands to detect database error disclosures.
+* **Broken JWT Validation**: Analyzes token acceptance rules against weak keys or signature bypasses (`none` algorithm).
+* **Excessive Data Exposure**: Evaluates response bodies against patterns matching API keys, credentials, private keys, and environment files.
+* **CORS Policies**: Inspects origin reflections to detect wildcard (`*`) trust setups.
+* **Rate Limiting Checks**: Simulates heavy requests to verify if HTTP 429 Throttle status is returned.
+* **Framework & Server Fingerprinting**: Analyzes response signatures to identify server types (Nginx, Apache) and framework runtimes.
+
+---
+
+## 14. OWASP & CWE Mapping
+Vulnerabilities detected by the scanning engine are automatically categorized under the corresponding **OWASP API Security Top 10** risks and **Common Weakness Enumeration (CWE)**:
+
+| Security Check | OWASP API Top 10 (2023) | CWE Identifier |
+| :--- | :--- | :--- |
+| **SQL Injection (SQLi)** | API10:2023 Unsafe Consumption of APIs | CWE-89 (Improper Neutralization of Special Elements) |
+| **Broken JWT Authentication** | API2:2023 Broken Authentication | CWE-287 (Improper Authentication) |
+| **Excessive Data Exposure** | API3:2023 Broken Object Property Level Authorization | CWE-200 (Exposure of Sensitive Information) |
+| **CORS Wildcard Policy** | API8:2023 Security Misconfiguration | CWE-942 (Permissive CORS Policy) |
+| **Missing Security Headers** | API8:2023 Security Misconfiguration | CWE-693 (Protection Mechanism Failure) |
+| **Unenforced HTTPS (TLS)** | API8:2023 Security Misconfiguration | CWE-319 (Cleartext Transmission of Sensitive Data) |
+| **No Rate Limiting** | API4:2023 Unrestricted Resource Consumption | CWE-770 (Allocation of Resources Without Limits) |
+
+---
+
+## 15. AI Remediation
+API Auditor integrates Google Gemini AI to translate raw vulnerability logs into developer-focused recommendations:
+
+- **Google Gemini integration**: Directly invokes generative AI models using the official `@google/generative-ai` package.
+- **Context-aware vulnerability explanations**: Formulates an explanation based on the specific endpoint, request parameters, and response headers.
+- **Secure code recommendations**: Produces copy-pasteable, secure refactored code blocks for major stacks (Express, Python, Next.js) to resolve the issue.
+- **OWASP API Top 10 & CWE-aware remediation**: Enriches findings with structural details on how to prevent recurrent security failures.
+
+---
+
+## 16. Sample PDF Report
+API Auditor generates visual, print-ready security assessment documents. Using `PDFKit` on the backend, it structures a dashboard layout containing:
+* Overall Security Score indicator.
+* Card-based vulnerability count grouped by severity (High, Medium, Low, Info).
+* Structured table of target endpoints scanned.
+* Itemized review of each finding, alongside developer descriptions, severity classifications, and Gemini-generated code fixes.
+
+---
+
+## 17. Key Engineering Highlights (Resume Points)
+* **Full-stack REST API security assessment platform**: Engineered a 5-tier microservices architecture separating Node.js/Express orchestration from Python/FastAPI scanning engine.
+* **AI-powered remediation using Google Gemini**: Integrated LLM analysis pipelines to parse raw security vulnerabilities and generate copy-pasteable refactored code fixes.
+* **OWASP API Top 10 & CWE mapping**: Designed a structured mapping system to link custom scanning checks to standard security taxonomy.
+* **Automated PDF report generation**: Programmed backend rendering engines using PDFKit to generate audit documents containing scorecard metrics and code changes.
+* **Technology fingerprinting**: Built reconnaissance engines that inspect HTTP headers and response signatures to identify active runtime environments and server versions.
+* **JWT-based authentication**: Implemented session token management to secure resource dashboards and isolate user test targets.
+* **MongoDB Atlas integration**: Configured mongoose schemas to log targets, compare posture drift, and cache scan summaries.
+* **Cloud deployment using Render**: Deployed and configured the multi-container stack with environment variables and cross-origin controls.
+
+---
+
+## 18. Deployment Notes
+* **Render Free-Tier Cold Start**: The Frontend, Backend, and Scanner services are hosted on Render's free tier. If the application has been inactive, the containers spin down. **Please allow 30–40 seconds** for the services to wake up when making the first request or starting a scan.
+
+---
+
+## 19. Future Enhancements
+* **OpenAPI File Upload**: Allow users to drag-and-drop an `openapi.json` file to auto-configure route trees for comprehensive path scanning.
+* **Redis/BullMQ Task Queue**: Offload scanning pipelines to a background queue to handle longer scanner executions without timeouts.
+* **WebSockets Logs Integration**: Stream real-time scanner logs (Socket.io) to the frontend console as checks execute.
+* **Broken Object-Level Authorization (BOLA/BFLA) Probing**: Add stateful checks to query endpoints using varying resource identifiers.
+
+---
+
+## 20. Known Limitations
+* **REST API Focus**: The current version only audits standard REST endpoints (GraphQL, gRPC, and SOAP protocols are not supported).
+* **Parallel Request Cap**: Limits maximum targets to 10 endpoints per scanned scope to prevent triggering rate-limits on target endpoints.
+
+---
+
+## 21. License
+Distributed under the MIT License. See `LICENSE` for more details.
+
+---
+
+## 22. Author
+* **GitHub**: [pradeep-git-dev](https://github.com/pradeep-git-dev)
+* **Email**: narupradeep001@gmail.com
+* **Repository Link**: [https://github.com/pradeep-git-dev/API-Security-Scanner](https://github.com/pradeep-git-dev/API-Security-Scanner)
+
+---
+
+## 23. References
+* [OWASP API Security Top 10](https://owasp.org/www-project-api-security/)
+* [FastAPI Documentation](https://fastapi.tiangolo.com/)
+* [Express JS Framework](https://expressjs.com/)
+* [Next.js Web SDK](https://nextjs.org/)
+* [Google AI Studio (Gemini API)](https://ai.google.dev/)
+* [PDFKit Reference Manual](https://pdfkit.org/)
