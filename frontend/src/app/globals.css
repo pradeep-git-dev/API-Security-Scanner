@@ -1,8 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0D1117;
+  --foreground: #F0F6FC;
+  --card: #161B22;
+  --border: #30363D;
+  --primary: #2F81F7;
+  --success: #3FB950;
+  --warning: #D29922;
+  --danger: #F85149;
 }
 
 @theme inline {
@@ -10,17 +16,104 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Redefine Tailwind's utility colors using raw CSS overrides to avoid class renaming */
+.bg-zinc-50, .dark\:bg-zinc-950, .bg-zinc-950 {
+  background-color: var(--background) !important;
+}
+.bg-white, .dark\:bg-zinc-900, .bg-zinc-900 {
+  background-color: var(--card) !important;
+}
+.border-zinc-200, .dark\:border-zinc-800, .border-zinc-800, .border-zinc-100, .dark\:border-zinc-800\/60, .border-zinc-200\/60 {
+  border-color: var(--border) !important;
+}
+.text-zinc-900, .dark\:text-zinc-100, .text-zinc-800, .dark\:text-zinc-50, .text-zinc-700, .dark\:text-zinc-300, .text-zinc-650, .dark\:text-zinc-305 {
+  color: var(--foreground) !important;
+}
+.text-zinc-500, .dark\:text-zinc-400, .text-zinc-405, .text-zinc-450 {
+  color: #8b949e !important; /* Muted gray */
+}
+
+/* Primary Button / Accents overrides */
+.bg-red-600, .hover\:bg-red-700, .bg-red-650 {
+  background-color: var(--primary) !important;
+}
+.bg-red-600:hover, .hover\:bg-red-700:hover {
+  background-color: #1f6feb !important;
+}
+.text-red-600, .dark\:text-red-500, .text-red-650 {
+  color: var(--primary) !important;
+}
+.text-red-500, .dark\:text-red-400 {
+  color: #58a6ff !important;
+}
+
+/* Run scan button */
+.bg-emerald-650, .hover\:bg-emerald-700, .bg-emerald-700 {
+  background-color: var(--success) !important;
+}
+.bg-emerald-650:hover, .hover\:bg-emerald-700:hover {
+  background-color: #2ea043 !important; /* Slightly darker success green for hover */
+}
+
+/* Focus rings */
+.focus\:ring-red-500\/20:focus, .focus\:ring-red-500\/15:focus {
+  --tw-ring-color: rgba(47, 129, 247, 0.2) !important;
+}
+.focus\:border-red-600:focus {
+  border-color: var(--primary) !important;
+}
+
+/* Success status override */
+.text-emerald-650, .text-emerald-600, .dark\:text-emerald-400, .text-emerald-500 {
+  color: var(--success) !important;
+}
+.bg-emerald-100, .dark\:bg-emerald-950\/30 {
+  background-color: rgba(63, 185, 80, 0.15) !important;
+  color: var(--success) !important;
+  border-color: rgba(63, 185, 80, 0.3) !important;
+}
+
+/* Warning status override */
+.text-amber-600, .dark\:text-amber-400, .text-amber-500 {
+  color: var(--warning) !important;
+}
+.bg-amber-100, .dark\:bg-amber-950\/30 {
+  background-color: rgba(210, 153, 34, 0.15) !important;
+  color: var(--warning) !important;
+  border-color: rgba(210, 153, 34, 0.3) !important;
+}
+
+/* Danger status override */
+.text-rose-600, .dark\:text-rose-400, .text-rose-500, .dark\:text-rose-450, .dark\:text-rose-455 {
+  color: var(--danger) !important;
+}
+.bg-rose-100, .dark\:bg-rose-950\/30 {
+  background-color: rgba(248, 81, 73, 0.15) !important;
+  color: var(--danger) !important;
+  border-color: rgba(248, 81, 73, 0.3) !important;
+}
+
+/* Table hover */
+.hover\:bg-zinc-50\/40:hover, .dark\:hover\:bg-zinc-850\/20:hover {
+  background-color: #21262d !important;
+}
+
+/* Navbar backdrop blur fallback */
+.bg-white\/80, .dark\:bg-zinc-900\/85 {
+  background-color: rgba(13, 17, 23, 0.8) !important;
 }
