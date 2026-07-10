@@ -34,8 +34,16 @@ def build_scan_report(findings: List[Any], metadata: Dict[str, Any]) -> Dict[str
             evidence = getattr(header_finding, "evidence", {}) or {}
             evidence_dict = evidence if isinstance(evidence, dict) else (evidence.dict() if hasattr(evidence, "dict") else {})
             missing_list = evidence_dict.get("details", [])
+            
+            # Clean descriptive detail strings to extract raw header names (e.g. "Missing header: HSTS" -> "HSTS")
+            missing_cleaned = []
+            for item in missing_list:
+                parts = item.split(": ")
+                h_name = parts[1] if len(parts) > 1 else item
+                missing_cleaned.append(h_name)
+                
             for clean_name in headers_to_check.keys():
-                headers_status.append({"header": clean_name, "status": clean_name not in missing_list})
+                headers_status.append({"header": clean_name, "status": clean_name not in missing_cleaned})
     else:
         # Default fallback
         for clean_name in headers_to_check.keys():
