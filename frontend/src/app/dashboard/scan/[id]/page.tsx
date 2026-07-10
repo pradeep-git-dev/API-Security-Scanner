@@ -46,7 +46,7 @@ interface ScoreDeduction {
 
 interface HeaderStatus {
   header: string;
-  status: boolean;
+  status: boolean | null;
 }
 
 interface RateLimitReport {
@@ -677,13 +677,17 @@ export default function ScanDetailsPage() {
                       report.headersStatus.map((h, i) => (
                         <div key={i} className="flex justify-between items-center text-xs pb-1.5 border-b border-zinc-100 dark:border-zinc-800/40 last:border-b-0">
                           <span className="font-semibold text-zinc-750 dark:text-zinc-400">{h.header}</span>
-                          {h.status ? (
+                          {h.status === true ? (
                             <span className="flex items-center text-emerald-600 dark:text-emerald-400 font-bold gap-1 text-xxs">
                               <CheckCircle2 className="w-3.5 h-3.5" /> Present
                             </span>
-                          ) : (
+                          ) : h.status === false ? (
                             <span className="flex items-center text-rose-650 dark:text-rose-455 font-bold gap-1 text-xxs">
                               <XCircle className="w-3.5 h-3.5" /> Missing
+                            </span>
+                          ) : (
+                            <span className="flex items-center text-zinc-500 dark:text-zinc-400 font-bold gap-1 text-xxs">
+                              <AlertCircle className="w-3.5 h-3.5" /> Unknown
                             </span>
                           )}
                         </div>

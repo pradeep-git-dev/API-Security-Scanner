@@ -45,9 +45,10 @@ def build_scan_report(findings: List[Any], metadata: Dict[str, Any]) -> Dict[str
             for clean_name in headers_to_check.keys():
                 headers_status.append({"header": clean_name, "status": clean_name not in missing_cleaned})
     else:
-        # Default fallback
+        # No header finding means the check did not complete; avoid reporting
+        # verified missing headers without evidence from the header checker.
         for clean_name in headers_to_check.keys():
-            headers_status.append({"header": clean_name, "status": False})
+            headers_status.append({"header": clean_name, "status": None})
             
     # 3. Extract Rate Limit Report
     rate_limit_report = {

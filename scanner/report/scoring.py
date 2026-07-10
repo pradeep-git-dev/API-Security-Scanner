@@ -2,6 +2,27 @@ import json
 import os
 from typing import List, Tuple, Dict, Any
 
+SYSTEMIC_FINDINGS = {
+    "Missing HTTPS",
+    "Missing CSP",
+    "Missing HSTS",
+    "Missing X-Frame-Options",
+    "Missing X-Content-Type-Options",
+    "Missing Referrer-Policy",
+    "Missing Permissions-Policy",
+    "HTTP Methods Over-permissive",
+    "Weak CORS Policy (Permissive)",
+    "Rate Limiting Not Observed",
+    "JWT Signature Verification Bypass",
+}
+
+INCONCLUSIVE_PHRASES = (
+    "unable to verify",
+    "could not verify",
+    "not enough evidence",
+    "inconclusive",
+)
+
 def compute_score(findings: List[Any], metadata: Dict[str, Any]) -> Tuple[int, List[Dict[str, Any]], List[Dict[str, Any]], Dict[str, Any]]:
     """
     Computes category-based weighted security scores and overall test confidence.
@@ -52,42 +73,70 @@ def compute_score(findings: List[Any], metadata: Dict[str, Any]) -> Tuple[int, L
 
     category_penalties = {cat_name: 0 for cat_name in categories_config.keys()}
     deductions = []
+    applied_deductions = set()
+
+    def get_attr(finding: Any, key: str, default: Any = "") -> Any:
+        return getattr(finding, key, default) if hasattr(finding, key) else finding.get(key, default)
+
+    def evidence_dict_for(finding: Any) -> Dict[str, Any]:
+        evidence = get_attr(finding, "evidence", {}) or {}
+        if isinstance(evidence, dict):
+            return evidence
+        if hasattr(evidence, "dict"):
+            return evidence.dict()
+        return {}
+
+    def is_inconclusive(finding: Any) -> bool:
+        evidence = evidence_dict_for(finding)
+        searchable = [str(evidence.get("conclusion", ""))]
+        searchable.extend(str(item) for item in evidence.get("details", []) if item is not None)
+        return any(phrase in " ".join(searchable).lower() for phrase in INCONCLUSIVE_PHRASES)
+
+    def add_penalty(issue: str, finding: Any, override_penalty: int = None) -> None:
+        if issue not in findings_config:
+            return
+
+        rule = findings_config[issue]
+        cat = rule["category"]
+        base_penalty = rule["penalty"]
+        penalty = override_penalty if override_penalty is not None else base_penalty
+
+        if penalty <= 0:
+            return
+
+        endpoint = get_attr(finding, "endpoint", "")
+        dedupe_key = (cat, issue) if issue in SYSTEMIC_FINDINGS else (cat, issue, endpoint)
+        if dedupe_key in applied_deductions:
+            return
+
+        applied_deductions.add(dedupe_key)
+        category_penalties[cat] = category_penalties.get(cat, 0) + penalty
+        deductions.append({
+            "category": cat,
+            "reason": issue,
+            "penalty": penalty
+        })
 
     # 2. Map findings and compute penalties
     for finding in findings:
-        issue = finding.issue if hasattr(finding, "issue") else finding.get("issue", "")
+        issue = get_attr(finding, "issue", "")
         
         # Special handling for composite check "Missing Security Headers"
         if issue == "Missing Security Headers":
-            evidence = getattr(finding, "evidence", {}) or {}
-            evidence_dict = evidence if isinstance(evidence, dict) else (evidence.dict() if hasattr(evidence, "dict") else {})
+            evidence_dict = evidence_dict_for(finding)
             details = evidence_dict.get("details", [])
             for missing_header in details:
                 # Extract header name from detail string (e.g. "Missing header: HSTS")
                 parts = missing_header.split(": ")
                 h_name = parts[1] if len(parts) > 1 else missing_header
                 header_key = f"Missing {h_name}"
-                if header_key in findings_config:
-                    rule = findings_config[header_key]
-                    cat = rule["category"]
-                    penalty = rule["penalty"]
-                    category_penalties[cat] = category_penalties.get(cat, 0) + penalty
-                    deductions.append({
-                        "category": cat,
-                        "reason": header_key,
-                        "penalty": penalty
-                    })
+                add_penalty(header_key, finding)
         else:
             if issue in findings_config:
-                rule = findings_config[issue]
-                cat = rule["category"]
-                penalty = rule["penalty"]
-                category_penalties[cat] = category_penalties.get(cat, 0) + penalty
-                deductions.append({
-                    "category": cat,
-                    "reason": issue,
-                    "penalty": penalty
-                })
+                penalty_override = None
+                if issue == "Rate Limiting Not Observed" and is_inconclusive(finding):
+                    penalty_override = scoring_config.get("inconclusivePenalties", {}).get(issue, 5)
+                add_penalty(issue, finding, penalty_override)
 
     # 3. Calculate category breakdown and overall score
     categories_breakdown = []
@@ -188,5 +237,45 @@ def compute_score(findings: List[Any], metadata: Dict[str, Any]) -> Tuple[int, L
         "score": total_confidence_score,
         "label": confidence_label
     }
+
+    confidence_caps = scoring_config.get("confidenceScoreCaps", {
+        "LOW": 70,
+        "MEDIUM": 85,
+        "HIGH": 100
+    })
+    score_cap = confidence_caps.get(confidence_label, 100)
+    if overall_score > score_cap:
+        confidence_penalty = overall_score - score_cap
+        deductions.append({
+            "category": "Assessment Confidence",
+            "reason": f"{confidence_label.title()} Scan Confidence Cap",
+            "penalty": confidence_penalty
+        })
+
+        scale = score_cap / overall_score if overall_score else 0
+        scaled_categories = []
+        for idx, category in enumerate(categories_breakdown):
+            exact_score = category["score"] * scale
+            floor_score = int(exact_score)
+            scaled_categories.append({
+                "idx": idx,
+                "floor": floor_score,
+                "fraction": exact_score - floor_score
+            })
+
+        remainder = score_cap - sum(item["floor"] for item in scaled_categories)
+        for item in sorted(scaled_categories, key=lambda row: row["fraction"], reverse=True):
+            if remainder <= 0:
+                break
+            item["floor"] += 1
+            remainder -= 1
+
+        by_index = {item["idx"]: item["floor"] for item in scaled_categories}
+        for idx, category in enumerate(categories_breakdown):
+            category["score"] = by_index[idx]
+            max_score = category["max"]
+            category["percentage"] = int(round((category["score"] / max_score) * 100)) if max_score > 0 else 100
+
+        overall_score = score_cap
 
     return overall_score, categories_breakdown, deductions, confidence

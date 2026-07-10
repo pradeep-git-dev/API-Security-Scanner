@@ -30,7 +30,7 @@ export interface ScanResult {
   server: string;
   tlsVersion: string;
   responseTimeMs: number;
-  headersStatus: { header: string; status: boolean }[];
+  headersStatus: { header: string; status: boolean | null }[];
   rateLimitReport: {
     requestsSent: number;
     responses429: number;

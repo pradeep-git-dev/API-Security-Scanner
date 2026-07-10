@@ -21,5 +21,13 @@
     "Potential Public Endpoint": { "category": "API Security", "penalty": 8 },
     "JWT Signature Verification Bypass": { "category": "API Security", "penalty": 15 },
     "Potential SQL Injection": { "category": "Data Protection", "penalty": 15 }
+  },
+  "inconclusivePenalties": {
+    "Rate Limiting Not Observed": 5
+  },
+  "confidenceScoreCaps": {
+    "LOW": 70,
+    "MEDIUM": 85,
+    "HIGH": 100
   }
 }
