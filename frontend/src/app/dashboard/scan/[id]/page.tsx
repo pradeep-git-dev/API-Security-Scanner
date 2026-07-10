@@ -721,8 +721,12 @@ export default function ScanDetailsPage() {
               </div>
             )}
 
-            {/* Categorized Findings Section */}
-            <div className="space-y-4">
+          </div>
+
+        </div>
+
+        {/* Categorized Findings Section */}
+        <div className="space-y-4 pt-6 border-t border-zinc-200 dark:border-zinc-800">
               <div className="border-b border-zinc-200 dark:border-zinc-800 flex flex-wrap gap-2">
                 {[
                   { key: 'Security Findings', label: 'Security Findings', count: findings.filter(f => f.category === 'Security Findings').length },
@@ -939,10 +943,6 @@ export default function ScanDetailsPage() {
                 </div>
               )}
             </div>
-
-          </div>
-
-        </div>
 
       </main>
       {/* Footer */}
