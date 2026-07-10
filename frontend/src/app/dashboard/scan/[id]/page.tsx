@@ -133,6 +133,7 @@ export default function ScanDetailsPage() {
   const [expandedFindings, setExpandedFindings] = useState<Record<string, boolean>>({});
   const [exporting, setExporting] = useState(false);
   const [activeTab, setActiveTab] = useState<'Security Findings' | 'Observations' | 'Passed Checks' | 'Informational'>('Security Findings');
+  const [showConfDetails, setShowConfDetails] = useState(false);
 
   const handleExportPDF = async () => {
     setExporting(true);
@@ -416,10 +417,17 @@ export default function ScanDetailsPage() {
             
             <div className="flex items-center gap-6 border-t md:border-t-0 md:border-l border-zinc-100 dark:border-zinc-800 pt-6 md:pt-0 md:pl-8 flex-shrink-0">
               <div className="text-center">
-                <p className="text-xs text-zinc-400 dark:text-zinc-500 font-medium uppercase tracking-wider">Security Score</p>
-                <p className={`text-4xl sm:text-5xl font-extrabold tracking-tight mt-1 ${getScoreColor(scan.score)}`}>
-                  {scan.score}
+                <p className="text-xs text-zinc-405 dark:text-zinc-500 font-medium uppercase tracking-wider">
+                  {report?.confidence && report.confidence.score < 70 ? 'Estimated Security Score' : 'Security Score'}
                 </p>
+                <p className={`text-4xl sm:text-5xl font-extrabold tracking-tight mt-1 ${getScoreColor(scan.score)}`}>
+                  {scan.score}/100
+                </p>
+                {report?.confidence && report.confidence.score < 70 && (
+                  <p className="text-[10px] text-zinc-405 dark:text-zinc-500 mt-1 italic max-w-[150px] mx-auto leading-normal">
+                    Some checks could not be verified.
+                  </p>
+                )}
                 {report?.driftComparison && report.driftComparison.difference !== 0 && (
                   <div className={`mt-1.5 text-[10px] font-extrabold px-2 py-0.5 rounded-full inline-block ${
                     report.driftComparison.difference > 0 
@@ -480,17 +488,60 @@ export default function ScanDetailsPage() {
                     {scan.score}/100
                   </span>
                   {report?.confidence && (
-                    <span className={`text-xs font-semibold px-2 py-1 rounded-md ${
-                      report.confidence.label === 'HIGH' 
-                        ? 'bg-emerald-50 text-emerald-755 dark:bg-emerald-950/20 dark:text-emerald-400'
-                        : report.confidence.label === 'MEDIUM'
-                        ? 'bg-amber-50 text-amber-755 dark:bg-amber-950/20 dark:text-amber-400'
-                        : 'bg-rose-50 text-rose-755 dark:bg-rose-950/20 dark:text-rose-400'
-                    }`}>
-                      Confidence: {report.confidence.score}% {report.confidence.label}
-                    </span>
+                    <div className="relative">
+                      <button 
+                        onClick={() => setShowConfDetails(!showConfDetails)}
+                        className={`text-xs font-semibold px-2 py-1 rounded-md transition-all cursor-pointer select-none hover:opacity-80 flex items-center gap-1 ${
+                          report.confidence.label === 'HIGH' 
+                            ? 'bg-emerald-50 text-emerald-755 dark:bg-emerald-950/20 dark:text-emerald-400'
+                            : report.confidence.label === 'MEDIUM'
+                            ? 'bg-amber-50 text-amber-755 dark:bg-amber-950/20 dark:text-amber-400'
+                            : 'bg-rose-50 text-rose-755 dark:bg-rose-950/20 dark:text-rose-400'
+                        }`}
+                      >
+                        <span>Confidence: {report.confidence.score}% {report.confidence.label}</span>
+                        <span className="text-[10px]">ℹ️</span>
+                      </button>
+                      
+                      {showConfDetails && (
+                        <div className="absolute right-0 mt-2 z-10 w-64 p-3 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl text-left text-xs font-sans text-zinc-300 space-y-2 leading-relaxed animate-in fade-in duration-200">
+                          <p className="font-bold text-zinc-100">Confidence Calculation details:</p>
+                          <ul className="space-y-1.5 font-medium">
+                            <li className="flex items-center gap-1.5">
+                              {scan?.fingerprint?.tls && scan.fingerprint.tls !== 'N/A' ? '✔' : '✘'} <span>HTTPS verified</span>
+                            </li>
+                            <li className="flex items-center gap-1.5">
+                              {findings.some(f => f.issue === 'Missing Security Headers' || f.issue === 'Security Headers Configured') ? '✔' : '✘'} <span>Response headers analyzed</span>
+                            </li>
+                            <li className="flex items-center gap-1.5">
+                              {scan?.totalEndpointsScanned && scan.totalEndpointsScanned > 0 ? '✔' : '✘'} <span>Endpoint discovery completed</span>
+                            </li>
+                            <li className="flex items-center gap-1.5">
+                              {scan?.fingerprint?.framework?.name && scan.fingerprint.framework.name !== 'Unknown' ? '✔' : '✘'} <span>Framework fingerprint status</span>
+                            </li>
+                            <li className="flex items-center gap-1.5">
+                              {scan?.fingerprint?.hosting?.name && scan.fingerprint.hosting.name !== 'Unknown' ? '✔' : '✘'} <span>Hosting fingerprint status</span>
+                            </li>
+                            <li className="flex items-center gap-1.5">
+                              {scan?.totalEndpointsScanned && scan.totalEndpointsScanned > 1 ? '✔' : '✘'} <span>Broad endpoint coverage</span>
+                            </li>
+                            <li className="flex items-center gap-1.5">
+                              {scan?.fingerprint?.server?.name && scan.fingerprint.server.name !== 'Unknown' ? '✔' : '✘'} <span>Server fingerprint status</span>
+                            </li>
+                          </ul>
+                          <p className="text-[10px] text-zinc-550 pt-1 border-t border-zinc-800">
+                            Confidence represents completeness and coverage of execution checks.
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
+                {report?.confidence && report.confidence.score < 70 && (
+                  <p className="text-[10px] text-zinc-405 dark:text-zinc-500 mt-2 italic">
+                    Some checks could not be verified.
+                  </p>
+                )}
               </div>
 
               {/* Category Breakdown */}
@@ -943,6 +994,39 @@ export default function ScanDetailsPage() {
                 </div>
               )}
             </div>
+
+        {/* Scan Summary Card */}
+        <div className="w-full max-w-6xl mx-auto px-4 mt-8">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm space-y-4">
+            <h3 className="text-sm font-bold text-zinc-850 dark:text-zinc-300 uppercase tracking-wider border-b border-zinc-150 dark:border-zinc-800 pb-2">
+              Scan Summary
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+              <div className="bg-zinc-50 dark:bg-zinc-950 p-3 rounded border border-zinc-200/50 dark:border-zinc-850">
+                <span className="text-[10px] text-zinc-400 uppercase block font-semibold">Checks Executed</span>
+                <span className="text-lg font-bold mt-1 block">{findings.length}</span>
+              </div>
+              <div className="bg-zinc-50 dark:bg-zinc-950 p-3 rounded border border-zinc-200/50 dark:border-zinc-850">
+                <span className="text-[10px] text-zinc-400 uppercase block font-semibold text-emerald-500">Checks Passed</span>
+                <span className="text-lg font-bold mt-1 block text-emerald-500">
+                  {findings.filter(f => f.category === 'Passed Checks').length}
+                </span>
+              </div>
+              <div className="bg-zinc-50 dark:bg-zinc-950 p-3 rounded border border-zinc-200/50 dark:border-zinc-850">
+                <span className="text-[10px] text-zinc-400 uppercase block font-semibold text-rose-500">Checks Failed</span>
+                <span className="text-lg font-bold mt-1 block text-rose-500">
+                  {findings.filter(f => f.category === 'Security Findings').length}
+                </span>
+              </div>
+              <div className="bg-zinc-50 dark:bg-zinc-950 p-3 rounded border border-zinc-200/50 dark:border-zinc-850">
+                <span className="text-[10px] text-zinc-400 uppercase block font-semibold text-amber-500 font-semibold">Inconclusive</span>
+                <span className="text-lg font-bold mt-1 block text-amber-500 font-semibold">
+                  {findings.filter(f => f.category === 'Observations' || f.category === 'Informational').length}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
 
       </main>
       {/* Footer */}

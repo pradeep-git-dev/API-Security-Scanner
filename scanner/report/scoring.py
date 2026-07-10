@@ -31,12 +31,12 @@ def compute_score(findings: List[Any], metadata: Dict[str, Any]) -> Tuple[int, L
             },
             "findings": {
                 "Missing HTTPS": { "category": "Transport Security", "penalty": 15 },
-                "Missing CSP": { "category": "Header Security", "penalty": 8 },
-                "Missing HSTS": { "category": "Header Security", "penalty": 4 },
-                "Missing X-Frame-Options": { "category": "Header Security", "penalty": 3 },
-                "Missing X-Content-Type-Options": { "category": "Header Security", "penalty": 3 },
-                "Missing Referrer-Policy": { "category": "Header Security", "penalty": 2 },
-                "Missing Permissions-Policy": { "category": "Header Security", "penalty": 2 },
+                "Missing CSP": { "category": "Header Security", "penalty": 5 },
+                "Missing HSTS": { "category": "Header Security", "penalty": 5 },
+                "Missing X-Frame-Options": { "category": "Header Security", "penalty": 5 },
+                "Missing X-Content-Type-Options": { "category": "Header Security", "penalty": 5 },
+                "Missing Referrer-Policy": { "category": "Header Security", "penalty": 5 },
+                "Missing Permissions-Policy": { "category": "Header Security", "penalty": 5 },
                 "HTTP Methods Over-permissive": { "category": "Server Security", "penalty": 5 },
                 "Excessive Data Exposure (Sensitive Secrets)": { "category": "Data Protection", "penalty": 15 },
                 "Weak CORS Policy (Permissive)": { "category": "API Security", "penalty": 12 },
@@ -63,7 +63,10 @@ def compute_score(findings: List[Any], metadata: Dict[str, Any]) -> Tuple[int, L
             evidence_dict = evidence if isinstance(evidence, dict) else (evidence.dict() if hasattr(evidence, "dict") else {})
             details = evidence_dict.get("details", [])
             for missing_header in details:
-                header_key = f"Missing {missing_header}"
+                # Extract header name from detail string (e.g. "Missing header: HSTS")
+                parts = missing_header.split(": ")
+                h_name = parts[1] if len(parts) > 1 else missing_header
+                header_key = f"Missing {h_name}"
                 if header_key in findings_config:
                     rule = findings_config[header_key]
                     cat = rule["category"]
