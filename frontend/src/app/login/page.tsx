@@ -40,22 +40,22 @@ export default function LoginPage() {
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 p-4 transition-colors duration-300 overflow-hidden">
       {/* Decorative Background Glows */}
-      <div className="absolute top-0 left-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2 pointer-events-none" />
+      <div className="absolute top-0 left-0 w-96 h-96 bg-red-600/5 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-red-600/5 rounded-full blur-3xl translate-x-1/2 translate-y-1/2 pointer-events-none" />
 
       {/* Main Card */}
       <div className="relative w-full max-w-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xl p-8 space-y-6 transition-all duration-300 hover:shadow-2xl">
-        {/* Top Accent Gradient Bar */}
-        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
+        {/* Top Accent Bar */}
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-red-600" />
 
         {/* Branding & Header */}
         <div className="flex flex-col items-center text-center space-y-3">
-          <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-inner">
+          <div className="w-12 h-12 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 flex items-center justify-center text-red-600 dark:text-red-500 shadow-inner">
             <Shield className="w-6 h-6 animate-pulse" />
           </div>
           <div className="space-y-1">
             <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-              Welcome to <span className="bg-gradient-to-r from-indigo-500 to-violet-600 bg-clip-text text-transparent">API Sentinel</span>
+              Welcome to <span className="text-red-600 dark:text-red-500 font-extrabold">API Auditor</span>
             </h1>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
               Sign in to secure and monitor your APIs
@@ -88,7 +88,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="block w-full pl-10 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200"
+                className="block w-full pl-10 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-red-500/15 focus:border-red-600 transition-all duration-200"
               />
             </div>
           </div>
@@ -108,7 +108,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="block w-full pl-10 pr-10 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200"
+                className="block w-full pl-10 pr-10 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-red-500/15 focus:border-red-600 transition-all duration-200"
               />
               <button
                 type="button"
@@ -124,7 +124,7 @@ export default function LoginPage() {
             id="login-btn" 
             type="submit" 
             disabled={loading}
-            className="w-full flex items-center justify-center py-2.5 px-4 bg-indigo-605 hover:bg-indigo-700 disabled:bg-indigo-600/50 text-white font-medium rounded-lg text-sm transition-all duration-200 cursor-pointer shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:ring-offset-2 dark:focus:ring-offset-zinc-900"
+            className="w-full flex items-center justify-center py-2.5 px-4 bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white font-medium rounded-lg text-sm transition-all duration-200 cursor-pointer shadow-md focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:ring-offset-2 dark:focus:ring-offset-zinc-900"
           >
             {loading ? (
               <>
@@ -140,10 +140,16 @@ export default function LoginPage() {
         {/* Redirect Link */}
         <div className="pt-2 text-center text-sm text-zinc-500 dark:text-zinc-400">
           Don't have an account?{' '}
-          <a href="/register" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline transition-colors duration-150">
+          <a href="/register" className="font-semibold text-red-600 dark:text-red-400 hover:underline transition-colors duration-150">
             Register here
           </a>
         </div>
+      </div>
+
+      {/* Footer */}
+      <div className="absolute bottom-6 left-0 right-0 text-center space-y-1 pointer-events-none">
+        <p className="text-xs font-bold text-zinc-400 dark:text-zinc-650">API Auditor v1.0</p>
+        <p className="text-[10px] text-zinc-450 dark:text-zinc-700">Automated REST API Security Assessment Platform</p>
       </div>
     </div>
   );

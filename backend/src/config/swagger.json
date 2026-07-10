@@ -1,12 +1,12 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "API Sentinel Security Scanner",
-    "description": "Backend API documentation for the API Sentinel AI-powered security scanner. Provides JWT authentication, scan target orchestration, real-time results retrieval, AI-enriched explanations, and PDF report downloads.",
+    "title": "API Auditor Security Scanner",
+    "description": "Backend API documentation for the API Auditor AI-powered security scanner. Provides JWT authentication, scan target orchestration, real-time results retrieval, AI-enriched explanations, and PDF report downloads.",
     "version": "1.0.0",
     "contact": {
-      "name": "API Sentinel Team",
-      "email": "support@sentinel.local"
+      "name": "API Auditor Team",
+      "email": "support@auditor.local"
     }
   },
   "servers": [
@@ -19,7 +19,7 @@
     "/health": {
       "get": {
         "summary": "Retrieve Service Health Status",
-        "description": "Returns the status, service name, and version of the API Sentinel backend service.",
+        "description": "Returns the status, service name, and version of the API Auditor backend service.",
         "responses": {
           "200": {
             "description": "Service is healthy and running",
@@ -426,7 +426,7 @@
               "Content-Disposition": {
                 "schema": {
                   "type": "string",
-                  "example": "attachment; filename=\"API-Sentinel-Report-651a2e4125fdab31cc8d41e2.pdf\""
+                  "example": "attachment; filename=\"API-Auditor-Report-651a2e4125fdab31cc8d41e2.pdf\""
                 }
               }
             },

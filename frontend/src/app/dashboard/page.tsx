@@ -313,12 +313,12 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans pb-12">
+    <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans">
       {/* Top Navbar */}
       <header className="sticky top-0 z-40 w-full bg-white/80 dark:bg-zinc-900/85 backdrop-blur border-b border-zinc-200 dark:border-zinc-800">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <span className="font-bold text-lg text-indigo-600 dark:text-indigo-400 tracking-tight flex items-center">
-            <Shield className="w-5 h-5 mr-2" /> API Sentinel
+          <span className="font-bold text-lg text-red-650 dark:text-red-500 tracking-tight flex items-center">
+            <Shield className="w-5 h-5 mr-2" /> API Auditor
           </span>
           <div className="flex items-center space-x-4">
             <button 
@@ -338,7 +338,7 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8 flex-grow w-full">
         {/* Messages */}
         {error && (
           <div className="p-4 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 rounded-xl text-sm text-rose-800 dark:text-rose-300 flex items-start">
@@ -356,7 +356,7 @@ export default function DashboardPage() {
         {/* Statistics Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-xl shadow-sm flex items-center space-x-4">
-            <div className="p-3 rounded-lg bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400">
+            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400">
               <Activity className="w-6 h-6" />
             </div>
             <div>
@@ -366,7 +366,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-xl shadow-sm flex items-center space-x-4">
-            <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400">
+            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400">
               <Award className="w-6 h-6" />
             </div>
             <div>
@@ -376,7 +376,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-xl shadow-sm flex items-center space-x-4">
-            <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400">
+            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400">
               <ShieldAlert className="w-6 h-6" />
             </div>
             <div>
@@ -386,7 +386,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-xl shadow-sm flex items-center space-x-4">
-            <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400">
+            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400">
               <Clock className="w-6 h-6" />
             </div>
             <div>
@@ -421,14 +421,14 @@ export default function DashboardPage() {
                   value={targetUrl}
                   onChange={(e) => setTargetUrl(e.target.value)}
                   required
-                  className="block w-full pl-10 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                  className="block w-full pl-10 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-red-500/15 focus:border-red-600 transition-all"
                 />
               </div>
               
               <button 
                 type="submit" 
                 disabled={submitting}
-                className="inline-flex items-center justify-center px-5 py-2.5 bg-indigo-605 hover:bg-indigo-700 disabled:bg-indigo-600/50 text-white rounded-lg text-sm font-medium transition-colors cursor-pointer"
+                className="inline-flex items-center justify-center px-5 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white rounded-lg text-sm font-medium transition-colors cursor-pointer"
               >
                 {submitting ? (
                   <>
@@ -452,7 +452,7 @@ export default function DashboardPage() {
                 className="w-full flex items-center justify-between px-4 py-3 bg-zinc-50 dark:bg-zinc-900/50 hover:bg-zinc-100 dark:hover:bg-zinc-900 text-sm font-semibold transition-colors cursor-pointer text-zinc-700 dark:text-zinc-300"
               >
                 <span className="flex items-center">
-                  <Key className="w-4 h-4 mr-2 text-indigo-500" />
+                  <Key className="w-4 h-4 mr-2 text-red-550" />
                   Advanced Scan Configuration (Authentication & OpenAPI)
                 </span>
                 {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -470,7 +470,7 @@ export default function DashboardPage() {
                       <select 
                         value={authType}
                         onChange={(e) => setAuthType(e.target.value)}
-                        className="block w-full px-3.5 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                        className="block w-full px-3.5 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500/15"
                       >
                         <option value="None">None</option>
                         <option value="Bearer">Bearer Token</option>
@@ -554,7 +554,7 @@ export default function DashboardPage() {
                     
                     <div className="space-y-1.5">
                       <label className="text-xs font-medium text-zinc-500">Swagger / OpenAPI definition (JSON or YAML)</label>
-                      <div className="border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl p-6 text-center hover:border-indigo-500/50 dark:hover:border-indigo-500/30 transition-colors relative cursor-pointer">
+                      <div className="border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl p-6 text-center hover:border-red-500/50 dark:hover:border-red-500/30 transition-colors relative cursor-pointer">
                         <input 
                           type="file" 
                           accept=".json,.yaml,.yml"
@@ -582,7 +582,7 @@ export default function DashboardPage() {
           
           {loading ? (
             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-12 shadow-sm text-center">
-              <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto mb-4" />
+              <Loader2 className="w-8 h-8 text-red-650 animate-spin mx-auto mb-4" />
               <p className="text-zinc-600 dark:text-zinc-400 font-medium">Retrieving scan history...</p>
             </div>
           ) : scans.length === 0 ? (
@@ -616,7 +616,6 @@ export default function DashboardPage() {
                       >
                         <td className="py-4 px-6 font-medium text-zinc-900 dark:text-zinc-100 break-all max-w-[280px]">
                           <div className="flex items-center space-x-2.5">
-                            <Globe className="w-4 h-4 text-zinc-400 flex-shrink-0" />
                             <span className="truncate">{scan.targetUrl}</span>
                           </div>
                         </td>
@@ -646,7 +645,6 @@ export default function DashboardPage() {
                         </td>
                         <td className="py-4 px-6 whitespace-nowrap text-sm text-zinc-500 dark:text-zinc-400">
                           <div className="flex items-center space-x-2">
-                            <Calendar className="w-4 h-4 text-zinc-400" />
                             <span>{new Date(scan.createdAt).toLocaleDateString()}</span>
                           </div>
                         </td>
@@ -776,6 +774,11 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+      {/* Footer */}
+      <footer className="mt-auto py-8 border-t border-zinc-200 dark:border-zinc-800 text-center space-y-1 w-full max-w-6xl mx-auto px-4">
+        <p className="text-xs font-bold text-zinc-400 dark:text-zinc-650">API Auditor v1.0</p>
+        <p className="text-[10px] text-zinc-450 dark:text-zinc-700">Automated REST API Security Assessment Platform</p>
+      </footer>
     </div>
   );
 }

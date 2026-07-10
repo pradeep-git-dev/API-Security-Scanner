@@ -408,7 +408,7 @@ export const exportScanPDF = async (req: AuthenticatedRequest, res: Response) =>
     const pdfBuffer = await generateScanPDF(scan as any, report as any, findings as any[]);
 
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="API-Sentinel-Report-${scan._id}.pdf"`);
+    res.setHeader('Content-Disposition', `attachment; filename="API-Auditor-Report-${scan._id}.pdf"`);
     return res.send(pdfBuffer);
   } catch (error: any) {
     console.error('Export PDF error:', error);

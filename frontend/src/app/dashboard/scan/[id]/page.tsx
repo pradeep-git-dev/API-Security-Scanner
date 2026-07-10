@@ -144,7 +144,7 @@ export default function ScanDetailsPage() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `API-Sentinel-Report-${scan?._id || id}.pdf`);
+      link.setAttribute('download', `API-Auditor-Report-${scan?._id || id}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.parentNode?.removeChild(link);
@@ -348,7 +348,7 @@ export default function ScanDetailsPage() {
   const filteredFindings = findings.filter(f => f.category === activeTab);
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans pb-12">
+    <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans">
       {/* Top Navbar */}
       <header className="sticky top-0 z-40 w-full bg-white/80 dark:bg-zinc-900/85 backdrop-blur border-b border-zinc-200 dark:border-zinc-800">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -356,8 +356,8 @@ export default function ScanDetailsPage() {
             <Link href="/dashboard" className="p-2 -ml-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
               <ArrowLeft className="w-5 h-5" />
             </Link>
-            <span className="font-bold text-lg text-indigo-650 dark:text-indigo-400 tracking-tight flex items-center">
-              <Shield className="w-5 h-5 mr-2" /> API Sentinel
+            <span className="font-bold text-lg text-red-650 dark:text-red-500 tracking-tight flex items-center">
+              <Shield className="w-5 h-5 mr-2" /> API Auditor
             </span>
           </div>
           <div className="flex items-center space-x-4">
@@ -372,7 +372,7 @@ export default function ScanDetailsPage() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8 flex-grow w-full">
         
         {/* URL, Type and Basic Status */}
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm">
@@ -401,7 +401,7 @@ export default function ScanDetailsPage() {
                   <button
                     onClick={handleExportPDF}
                     disabled={exporting}
-                    className="inline-flex items-center px-3 py-1 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-600/50 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                    className="inline-flex items-center px-3 py-1 bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                   >
                     {exporting ? (
                       <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
@@ -444,35 +444,23 @@ export default function ScanDetailsPage() {
 
           {/* Quick Metrics Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 pt-6 border-t border-zinc-100 dark:border-zinc-800">
-            <div className="flex items-center space-x-3">
-              <Globe className="w-5 h-5 text-zinc-400 dark:text-zinc-500 flex-shrink-0" />
-              <div>
-                <p className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">Scanned Host</p>
-                <p className="text-sm font-semibold truncate max-w-[150px]">{new URL(scan.targetUrl).hostname}</p>
-              </div>
+            <div>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 font-semibold uppercase tracking-wider">Scanned Host</p>
+              <p className="text-sm font-semibold truncate max-w-[150px] mt-1">{new URL(scan.targetUrl).hostname}</p>
             </div>
-            <div className="flex items-center space-x-3">
-              <Clock className="w-5 h-5 text-zinc-400 dark:text-zinc-550 flex-shrink-0" />
-              <div>
-                <p className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">Duration</p>
-                <p className="text-sm font-semibold">{formatDuration(scan.durationMs)}</p>
-              </div>
+            <div>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 font-semibold uppercase tracking-wider">Duration</p>
+              <p className="text-sm font-semibold mt-1">{formatDuration(scan.durationMs)}</p>
             </div>
-            <div className="flex items-center space-x-3">
-              <Calendar className="w-5 h-5 text-zinc-400 dark:text-zinc-550 flex-shrink-0" />
-              <div>
-                <p className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">Scan Date</p>
-                <p className="text-sm font-semibold truncate max-w-[150px]" title={scan.completedAt ? new Date(scan.completedAt).toLocaleString() : 'N/A'}>
-                  {scan.completedAt ? new Date(scan.completedAt).toLocaleDateString() : 'N/A'}
-                </p>
-              </div>
+            <div>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 font-semibold uppercase tracking-wider">Scan Date</p>
+              <p className="text-sm font-semibold truncate max-w-[150px] mt-1" title={scan.completedAt ? new Date(scan.completedAt).toLocaleString() : 'N/A'}>
+                {scan.completedAt ? new Date(scan.completedAt).toLocaleDateString() : 'N/A'}
+              </p>
             </div>
-            <div className="flex items-center space-x-3">
-              <Shield className="w-5 h-5 text-zinc-400 dark:text-zinc-550 flex-shrink-0" />
-              <div>
-                <p className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">Endpoints Scanned</p>
-                <p className="text-sm font-semibold">{scan.totalEndpointsScanned || 1}</p>
-              </div>
+            <div>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 font-semibold uppercase tracking-wider">Endpoints Scanned</p>
+              <p className="text-sm font-semibold mt-1">{scan.totalEndpointsScanned || 1}</p>
             </div>
           </div>
         </div>
@@ -524,7 +512,7 @@ export default function ScanDetailsPage() {
                       </div>
                       <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-1.5 overflow-hidden">
                         <div 
-                          className="bg-indigo-500 dark:bg-indigo-400 h-1.5 rounded-full transition-all duration-500" 
+                          className="bg-red-650 dark:bg-red-500 h-1.5 rounded-full transition-all duration-500" 
                           style={{ width: `${cat.percentage}%` }}
                         ></div>
                       </div>
@@ -538,7 +526,7 @@ export default function ScanDetailsPage() {
                 <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Detailed Deductions</h4>
                 
                 {report?.scoreBreakdown && report.scoreBreakdown.length > 0 ? (
-                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  <div className="space-y-2">
                     {report.scoreBreakdown.map((item, idx) => (
                       <div key={idx} className="flex justify-between items-start text-xs">
                         <div className="flex flex-col">
@@ -597,11 +585,11 @@ export default function ScanDetailsPage() {
               <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm space-y-4">
                 <h3 className="text-sm font-bold text-zinc-850 dark:text-zinc-300 uppercase tracking-wider flex items-center justify-between">
                   <span>Endpoint Tree</span>
-                  <span className="text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded">
+                  <span className="text-[10px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-350 px-2 py-0.5 rounded">
                     {scan.discoveryMetadata?.source || 'OpenAPI'}
                   </span>
                 </h3>
-                <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
+                <div className="space-y-2.5">
                   {report.endpointTree.map((node, i) => (
                     <div key={i} className="flex justify-between items-center text-xs pb-2 border-b border-zinc-100 dark:border-zinc-800/40 last:border-b-0 last:pb-0">
                       <span className="font-mono text-zinc-750 dark:text-zinc-300 break-all">{node.path}</span>
@@ -630,10 +618,10 @@ export default function ScanDetailsPage() {
                 <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm space-y-4">
                   <h3 className="text-sm font-bold text-zinc-855 dark:text-zinc-303 uppercase tracking-wider flex items-center justify-between">
                     <span>Header Verification</span>
-                    <span className="text-xxs font-normal bg-zinc-100 text-zinc-650 px-2 py-0.5 rounded">Security Headers</span>
+                    <span className="text-xxs font-normal bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 px-2 py-0.5 rounded">Security Headers</span>
                   </h3>
                   
-                  <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                  <div className="space-y-2">
                     {report.headersStatus && report.headersStatus.length > 0 ? (
                       report.headersStatus.map((h, i) => (
                         <div key={i} className="flex justify-between items-center text-xs pb-1.5 border-b border-zinc-100 dark:border-zinc-800/40 last:border-b-0">
@@ -695,7 +683,7 @@ export default function ScanDetailsPage() {
               <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm space-y-4">
                 <h3 className="text-sm font-bold text-zinc-855 dark:text-zinc-300 uppercase tracking-wider flex items-center justify-between">
                   <span>Environment Fingerprint</span>
-                  <span className="text-xxs font-normal bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded">
+                  <span className="text-xxs font-normal bg-zinc-100 dark:bg-zinc-850 text-zinc-750 dark:text-zinc-300 px-2 py-0.5 rounded">
                     Confidence Rated
                   </span>
                 </h3>
@@ -749,14 +737,14 @@ export default function ScanDetailsPage() {
                       onClick={() => setActiveTab(tab.key as any)}
                       className={`px-4 py-2 border-b-2 text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                         isActive 
-                          ? 'border-indigo-600 text-indigo-650 dark:border-indigo-400 dark:text-indigo-400' 
+                          ? 'border-red-600 text-red-605 dark:border-red-500 dark:text-red-500' 
                           : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
                       }`}
                     >
                       <span>{tab.label}</span>
                       <span className={`text-xxs px-1.5 py-0.5 rounded-full ${
                         isActive 
-                          ? 'bg-indigo-100 text-indigo-750 dark:bg-indigo-950 dark:text-indigo-300' 
+                          ? 'bg-red-105 text-red-800 dark:bg-red-950/40 dark:text-red-300' 
                           : 'bg-zinc-100 text-zinc-650 dark:bg-zinc-800 dark:text-zinc-405'
                       }`}>
                         {tab.count}
@@ -840,8 +828,8 @@ export default function ScanDetailsPage() {
 
                             {/* Description block */}
                             <div className="space-y-1.5">
-                              <h4 className="text-xs text-zinc-405 dark:text-zinc-500 font-bold uppercase tracking-wider flex items-center gap-1.5">
-                                <Info className="w-3.5 h-3.5 text-indigo-500" /> Description
+                              <h4 className="text-xs text-zinc-405 dark:text-zinc-500 font-bold uppercase tracking-wider">
+                                Description
                               </h4>
                               <p className="text-sm text-zinc-700 dark:text-zinc-350 leading-relaxed">
                                 {finding.description}
@@ -851,8 +839,8 @@ export default function ScanDetailsPage() {
                             {/* Evidence block (Unified Schema) */}
                             {finding.evidence && (
                               <div className="space-y-2">
-                                <h4 className="text-xs text-zinc-405 dark:text-zinc-500 font-bold uppercase tracking-wider flex items-center gap-1.5">
-                                  <AlertCircle className="w-3.5 h-3.5 text-indigo-500" /> Evidence Logs
+                                <h4 className="text-xs text-zinc-405 dark:text-zinc-500 font-bold uppercase tracking-wider">
+                                  Evidence Logs
                                 </h4>
                                 {renderEvidence(finding.evidence)}
                               </div>
@@ -873,12 +861,11 @@ export default function ScanDetailsPage() {
                             {/* AI Remediation Card */}
                             {finding.category !== 'Passed Checks' && finding.category !== 'Informational' && finding.severity !== 'INFO' && (
                               <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm">
-                                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 px-5 py-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-                                  <span className="text-xs font-bold text-indigo-850 dark:text-indigo-350 flex items-center">
-                                    <Sparkles className="w-4 h-4 mr-2 text-indigo-500 animate-pulse" />
+                                <div className="bg-zinc-50 dark:bg-zinc-900 px-5 py-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+                                  <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center">
                                     AI Remediation & Fix Recommendation
                                   </span>
-                                  <span className="text-[10px] font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-400 px-2 py-0.5 rounded uppercase">
+                                  <span className="text-[10px] font-bold bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-400 px-2 py-0.5 rounded uppercase">
                                     Gemini AI
                                   </span>
                                 </div>
@@ -911,7 +898,7 @@ export default function ScanDetailsPage() {
 
                                   {finding.codeExample && (
                                     <div className="space-y-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/80">
-                                      <h5 className="text-xxs font-bold text-indigo-650 dark:text-indigo-455 uppercase tracking-wider">Secure Implementation Code Example</h5>
+                                      <h5 className="text-xxs font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">Secure Implementation Code Example</h5>
                                       <div className="rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 max-w-full">
                                         <SyntaxHighlighter 
                                           language="javascript" 
@@ -958,6 +945,11 @@ export default function ScanDetailsPage() {
         </div>
 
       </main>
+      {/* Footer */}
+      <footer className="mt-auto py-8 border-t border-zinc-200 dark:border-zinc-800 text-center space-y-1 w-full max-w-6xl mx-auto px-4">
+        <p className="text-xs font-bold text-zinc-400 dark:text-zinc-650">API Auditor v1.0</p>
+        <p className="text-[10px] text-zinc-450 dark:text-zinc-700">Automated REST API Security Assessment Platform</p>
+      </footer>
     </div>
   );
 }

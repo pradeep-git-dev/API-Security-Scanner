@@ -34,7 +34,7 @@ from checks.cors import cors_check
 # Report Modules
 from report.builder import build_scan_report
 
-app = FastAPI(title="API Sentinel Scanner Service")
+app = FastAPI(title="API Auditor Scanner Service")
 
 @app.get("/")
 def read_root():

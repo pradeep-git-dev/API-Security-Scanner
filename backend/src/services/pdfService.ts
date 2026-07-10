@@ -31,7 +31,7 @@ export const generateScanPDF = (scan: any, report: any, findings: any[]): Promis
 
       // Header Banner
       doc.fillColor('#1e1b4b').rect(0, 0, doc.page.width, 125).fill();
-      doc.fillColor('#ffffff').fontSize(24).font('Helvetica-Bold').text('API SENTINEL', 50, 35);
+      doc.fillColor('#ffffff').fontSize(24).font('Helvetica-Bold').text('API AUDITOR', 50, 35);
       doc.fontSize(11).font('Helvetica').text('Security Assessment & Vulnerability Report', 50, 65);
       
       const targetInfoText = `${targetType} (${framework})`;
@@ -368,7 +368,7 @@ const addPageFooter = (doc: PDFKit.PDFDocument, pageNum: number, totalPages: num
 
   doc.strokeColor('#cbd5e1').lineWidth(0.5).moveTo(50, doc.page.height - 50).lineTo(doc.page.width - 50, doc.page.height - 50).stroke();
   doc.fillColor('#64748b').font('Helvetica').fontSize(8);
-  doc.text('API Sentinel Security Assessment — Confidential Report', 50, doc.page.height - 42);
+  doc.text('API Auditor Security Assessment — Confidential Report', 50, doc.page.height - 42);
   doc.text(`Page ${pageNum} of ${totalPages}`, doc.page.width - 120, doc.page.height - 42, { align: 'right', width: 70 });
 
   doc.page.margins.bottom = oldBottomMargin;
