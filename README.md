@@ -263,7 +263,7 @@ API Auditor generates visual, print-ready security assessment documents. Using `
 
 ---
 
-## 17. Key Engineering Highlights (Resume Points)
+## 17. Key Engineering Highlights
 * **Full-stack REST API security assessment platform**: Engineered a 5-tier microservices architecture separating Node.js/Express orchestration from Python/FastAPI scanning engine.
 * **AI-powered remediation using Google Gemini**: Integrated LLM analysis pipelines to parse raw security vulnerabilities and generate copy-pasteable refactored code fixes.
 * **OWASP API Top 10 & CWE mapping**: Designed a structured mapping system to link custom scanning checks to standard security taxonomy.
